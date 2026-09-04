@@ -77,6 +77,7 @@ const RELATION_LABELS: Record<string, string> = {
 // Language labels - auto-generated from kaikki.org-dictionary-all.jsonl
 import { LANG_LABELS } from './lang_labels';
 import { getCustomWord, getCustomSuggestions } from './custom_words';
+import { getContraction, getLemmas, CONTRACTIONS } from './morphology';
 
 
 
@@ -428,7 +429,73 @@ export function lookupWord(word: string, lang?: string): MultiLookupResult {
         return dbResult;
     }
 
-    // 3. Fallback tự động cho các từ số nhiều tiếng Anh (Inflection / Plural)
+    // 3. Tra cứu bảng toàn bộ từ viết tắt tiếng Anh (Contractions Engine: he's, won't, don't, they're...)
+    const contraction = getContraction(cleanWord);
+    if (contraction) {
+        const baseResult = lookupDirectFromDb(contraction.baseWord, lang || 'en');
+        if (baseResult.exists) {
+            const results = baseResult.results.map(r => {
+                const noteMeaning: DictionaryMeaning = {
+                    definition: `${contraction.description} (${contraction.expansion}). Hiển thị nghĩa của từ gốc "${contraction.baseWord}":`,
+                    definition_lang: 'vi',
+                    example: null,
+                    pos: 'Từ viết tắt',
+                    sub_pos: 'Rút gọn / Trợ động từ',
+                    source: 'Contractions Engine',
+                    links: [contraction.baseWord]
+                };
+                return {
+                    ...r,
+                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
+                    meanings: [noteMeaning, ...r.meanings],
+                    relations: [
+                        { related_word: contraction.baseWord, relation_type: 'Gốc từ' },
+                        ...r.relations
+                    ]
+                };
+            });
+            return {
+                exists: true,
+                word: cleanWord,
+                results
+            };
+        }
+    }
+
+    // 4. Tra cứu tự động hình thái từ (Lemmatizer NLP Engine: bất quy tắc, số nhiều, chia thì, so sánh)
+    const lemmas = getLemmas(cleanWord);
+    for (const item of lemmas) {
+        const lemmaResult = lookupDirectFromDb(item.lemma, lang || 'en');
+        if (lemmaResult.exists) {
+            const results = lemmaResult.results.map(r => {
+                const noteMeaning: DictionaryMeaning = {
+                    definition: `${item.explanation} Hiển thị nghĩa của từ nguyên mẫu "${item.lemma}":`,
+                    definition_lang: 'vi',
+                    example: null,
+                    pos: 'Dạng biến thể',
+                    sub_pos: item.posType === 'noun' ? 'Số nhiều' : item.posType === 'verb' ? 'Chia thì' : 'So sánh',
+                    source: 'Lemmatizer NLP',
+                    links: [item.lemma]
+                };
+                return {
+                    ...r,
+                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
+                    meanings: [noteMeaning, ...r.meanings],
+                    relations: [
+                        { related_word: item.lemma, relation_type: 'Gốc từ' },
+                        ...r.relations
+                    ]
+                };
+            });
+            return {
+                exists: true,
+                word: cleanWord,
+                results
+            };
+        }
+    }
+
+    // 5. Fallback dự phòng quy tắc đuôi từ (Suffix Rule-based Fallback)
     const lowerWord = cleanWord.toLowerCase();
     const candidateLemmas: string[] = [];
     if (lowerWord.endsWith('ies') && lowerWord.length > 4) {
@@ -441,17 +508,25 @@ export function lookupWord(word: string, lang?: string): MultiLookupResult {
     if (lowerWord.endsWith('s') && !lowerWord.endsWith('ss') && lowerWord.length > 2) {
         candidateLemmas.push(lowerWord.slice(0, -1)); // cats -> cat, books -> book
     }
+    if (lowerWord.endsWith('ed') && lowerWord.length > 3) {
+        candidateLemmas.push(lowerWord.slice(0, -2)); // walked -> walk
+        candidateLemmas.push(lowerWord.slice(0, -1)); // loved -> love
+    }
+    if (lowerWord.endsWith('ing') && lowerWord.length > 4) {
+        candidateLemmas.push(lowerWord.slice(0, -3)); // walking -> walk
+        candidateLemmas.push(lowerWord.slice(0, -3) + 'e'); // making -> make
+    }
 
     for (const lemma of candidateLemmas) {
         const lemmaResult = lookupDirectFromDb(lemma, lang || 'en');
         if (lemmaResult.exists) {
             const results = lemmaResult.results.map(r => {
                 const noteMeaning: DictionaryMeaning = {
-                    definition: `Dạng số nhiều / biến thể của "${lemma}". Hiển thị nghĩa của từ nguyên mẫu:`,
+                    definition: `Dạng biến thể / số nhiều / chia thì của "${lemma}". Hiển thị nghĩa của từ nguyên mẫu:`,
                     definition_lang: 'vi',
                     example: null,
                     pos: 'Dạng biến thể',
-                    sub_pos: 'Số nhiều / Chia thì',
+                    sub_pos: 'Biến thể ngữ pháp',
                     source: 'Hệ thống tự động',
                     links: [lemma]
                 };
@@ -481,16 +556,20 @@ let suggestStmt: Database.Statement | null = null;
 
 /**
  * Get word suggestions based on prefix
- * Combines suggestions from Custom Words and SQLite Database
+ * Combines suggestions from Custom Words, Contractions, and SQLite Database
  * @param prefix - The prefix to search for
  * @param limit - Maximum number of suggestions to return
  * @param lang - Optional language code to filter by
  * @returns Array of suggested words
  */
 export function getSuggestions(prefix: string, limit: number = 8, lang?: string): string[] {
-    const customList = getCustomSuggestions(prefix, limit);
-    const database = getDb();
+    const cleanPrefix = prefix.trim().toLowerCase().replace(/[’‘`]/g, "'");
+    const customList = getCustomSuggestions(cleanPrefix, limit);
+    const contractionSuggestions = Object.keys(CONTRACTIONS)
+        .filter(k => k.startsWith(cleanPrefix))
+        .slice(0, limit);
 
+    const database = getDb();
     const normalizedPrefix = normalizeVietnamese(prefix.normalize('NFC').toLowerCase());
     let dbRows: string[] = [];
 
@@ -518,7 +597,7 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
         dbRows = rows.map(r => r.word);
     }
 
-    // Gộp gợi ý từ Custom Words và Database, loại bỏ trùng lặp
-    const merged = Array.from(new Set([...customList, ...dbRows]));
+    // Gộp gợi ý từ Custom Words, Contractions và Database, loại bỏ trùng lặp
+    const merged = Array.from(new Set([...customList, ...contractionSuggestions, ...dbRows]));
     return merged.slice(0, limit);
 }

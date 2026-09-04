@@ -66,6 +66,22 @@ describe('Dictionary Module', () => {
             expect(result.results[0].meanings[0].definition).toContain("he is")
         })
 
+        it('should find contraction "won\'t"', () => {
+            const result = lookupWord("won't")
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe("won't")
+            expect(result.results.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings[0].definition).toContain("will not")
+        })
+
+        it('should find contraction "they\'re"', () => {
+            const result = lookupWord("they're")
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe("they're")
+            expect(result.results.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings[0].definition).toContain("they are")
+        })
+
         it('should find plural form "classes" mapping to "class"', () => {
             const result = lookupWord("classes")
             expect(result.exists).toBe(true)
@@ -73,6 +89,22 @@ describe('Dictionary Module', () => {
             expect(result.results.length).toBeGreaterThan(0)
             expect(result.results[0].meanings.length).toBeGreaterThan(0)
             expect(result.results[0].meanings[0].definition).toContain("class")
+        })
+
+        it('should find superlative "happiest" mapping to "happy"', () => {
+            const result = lookupWord("happiest")
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe("happiest")
+            expect(result.results.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings[0].definition).toContain("happy")
+        })
+
+        it('should find superlative "funniest" mapping to "funny"', () => {
+            const result = lookupWord("funniest")
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe("funniest")
+            expect(result.results.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings[0].definition).toContain("funny")
         })
     })
 
