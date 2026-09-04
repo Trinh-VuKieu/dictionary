@@ -39,4 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-dictionary.db
+
+# dictionary.db is now tracked via Git LFS
+!lib/dictionary.db

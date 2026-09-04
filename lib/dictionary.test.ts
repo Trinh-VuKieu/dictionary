@@ -56,6 +56,24 @@ describe('Dictionary Module', () => {
                 expect(result.results[0].lang_code).toBe('vi')
             }
         })
+
+        it('should find custom contraction "he\'s"', () => {
+            const result = lookupWord("he's")
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe("he's")
+            expect(result.results.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings[0].definition).toContain("he is")
+        })
+
+        it('should find plural form "classes" mapping to "class"', () => {
+            const result = lookupWord("classes")
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe("classes")
+            expect(result.results.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings.length).toBeGreaterThan(0)
+            expect(result.results[0].meanings[0].definition).toContain("class")
+        })
     })
 
     describe('getSuggestions', () => {
@@ -78,6 +96,14 @@ describe('Dictionary Module', () => {
         it('should return empty array for no matches', () => {
             const suggestions = getSuggestions('xyznonexistent', 5)
             expect(suggestions).toEqual([])
+        })
+
+        it('should suggest custom words when typing prefix', () => {
+            const suggestions = getSuggestions("he'", 5)
+            expect(suggestions).toContain("he's")
+
+            const classSuggestions = getSuggestions("clas", 5)
+            expect(classSuggestions).toContain("classes")
         })
     })
 

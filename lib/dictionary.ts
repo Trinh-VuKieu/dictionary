@@ -76,6 +76,7 @@ const RELATION_LABELS: Record<string, string> = {
 
 // Language labels - auto-generated from kaikki.org-dictionary-all.jsonl
 import { LANG_LABELS } from './lang_labels';
+import { getCustomWord, getCustomSuggestions } from './custom_words';
 
 
 
@@ -316,12 +317,9 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
 }
 
 /**
- * Look up a word in the dictionary (multi-language)
- * @param word - The word to look up
- * @param lang - Optional language code to filter by
- * @returns MultiLookupResult with results grouped by language
+ * Direct lookup from SQLite database
  */
-export function lookupWord(word: string, lang?: string): MultiLookupResult {
+function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
     const { lookupAllLangsStmt, lookupByLangStmt } = getStatements();
 
     const normalized = normalizeVietnamese(word.normalize('NFC').toLowerCase());
@@ -360,20 +358,141 @@ export function lookupWord(word: string, lang?: string): MultiLookupResult {
     };
 }
 
+/**
+ * Look up a word in the dictionary (multi-language)
+ * Supports Custom Words (he's, custom vocabulary) and Inflections (classes -> class)
+ * @param word - The word to look up
+ * @param lang - Optional language code to filter by
+ * @returns MultiLookupResult with results grouped by language
+ */
+export function lookupWord(word: string, lang?: string): MultiLookupResult {
+    const cleanWord = word.trim().replace(/[’‘`]/g, "'");
+
+    // 1. Kiểm tra trong Custom Words trước
+    const customEntry = getCustomWord(cleanWord);
+    if (customEntry) {
+        // Nếu có kết quả tùy chỉnh riêng (như từ he's, she's)
+        if (customEntry.results && customEntry.results.length > 0) {
+            const filteredResults = lang
+                ? customEntry.results.filter(r => r.lang_code === lang)
+                : customEntry.results;
+            if (filteredResults.length > 0) {
+                return {
+                    exists: true,
+                    word: customEntry.word,
+                    results: filteredResults
+                };
+            }
+        }
+
+        // Nếu là dạng aliasTo (chuyển hướng lấy nghĩa từ từ gốc, ví dụ classes -> class)
+        const targetAlias = customEntry.aliasTo;
+        if (targetAlias) {
+            const baseResult = lookupDirectFromDb(targetAlias, lang);
+            if (baseResult.exists) {
+                const results = baseResult.results.map(r => {
+                    if (r.lang_code === 'en' || !lang) {
+                        const noteMeaning: DictionaryMeaning = {
+                            definition: customEntry.note || `Dạng biến thể của từ "${targetAlias}".`,
+                            definition_lang: 'vi',
+                            example: null,
+                            pos: 'Dạng biến thể',
+                            sub_pos: 'Biến thể ngữ pháp',
+                            source: 'Custom',
+                            links: [targetAlias]
+                        };
+                        return {
+                            ...r,
+                            audio: `/api/v1/tts?word=${encodeURIComponent(customEntry.word)}&lang=${r.lang_code}`,
+                            meanings: [noteMeaning, ...r.meanings],
+                            relations: [
+                                { related_word: targetAlias, relation_type: 'Gốc từ' },
+                                ...r.relations
+                            ]
+                        };
+                    }
+                    return r;
+                });
+                return {
+                    exists: true,
+                    word: customEntry.word,
+                    results
+                };
+            }
+        }
+    }
+
+    // 2. Tra cứu trực tiếp từ SQLite Database
+    const dbResult = lookupDirectFromDb(cleanWord, lang);
+    if (dbResult.exists) {
+        return dbResult;
+    }
+
+    // 3. Fallback tự động cho các từ số nhiều tiếng Anh (Inflection / Plural)
+    const lowerWord = cleanWord.toLowerCase();
+    const candidateLemmas: string[] = [];
+    if (lowerWord.endsWith('ies') && lowerWord.length > 4) {
+        candidateLemmas.push(lowerWord.slice(0, -3) + 'y'); // flies -> fly, studies -> study
+    }
+    if (lowerWord.endsWith('es') && lowerWord.length > 3) {
+        candidateLemmas.push(lowerWord.slice(0, -2)); // classes -> class, boxes -> box
+        candidateLemmas.push(lowerWord.slice(0, -1)); // houses -> house
+    }
+    if (lowerWord.endsWith('s') && !lowerWord.endsWith('ss') && lowerWord.length > 2) {
+        candidateLemmas.push(lowerWord.slice(0, -1)); // cats -> cat, books -> book
+    }
+
+    for (const lemma of candidateLemmas) {
+        const lemmaResult = lookupDirectFromDb(lemma, lang || 'en');
+        if (lemmaResult.exists) {
+            const results = lemmaResult.results.map(r => {
+                const noteMeaning: DictionaryMeaning = {
+                    definition: `Dạng số nhiều / biến thể của "${lemma}". Hiển thị nghĩa của từ nguyên mẫu:`,
+                    definition_lang: 'vi',
+                    example: null,
+                    pos: 'Dạng biến thể',
+                    sub_pos: 'Số nhiều / Chia thì',
+                    source: 'Hệ thống tự động',
+                    links: [lemma]
+                };
+                return {
+                    ...r,
+                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
+                    meanings: [noteMeaning, ...r.meanings],
+                    relations: [
+                        { related_word: lemma, relation_type: 'Gốc từ' },
+                        ...r.relations
+                    ]
+                };
+            });
+            return {
+                exists: true,
+                word: cleanWord,
+                results
+            };
+        }
+    }
+
+    return { exists: false, word: normalizeVietnamese(cleanWord.normalize('NFC').toLowerCase()), results: [] };
+}
+
 // Prepared statement for suggestions (lazy loaded)
 let suggestStmt: Database.Statement | null = null;
 
 /**
  * Get word suggestions based on prefix
+ * Combines suggestions from Custom Words and SQLite Database
  * @param prefix - The prefix to search for
  * @param limit - Maximum number of suggestions to return
  * @param lang - Optional language code to filter by
  * @returns Array of suggested words
  */
 export function getSuggestions(prefix: string, limit: number = 8, lang?: string): string[] {
+    const customList = getCustomSuggestions(prefix, limit);
     const database = getDb();
 
     const normalizedPrefix = normalizeVietnamese(prefix.normalize('NFC').toLowerCase());
+    let dbRows: string[] = [];
 
     if (lang) {
         const stmt = database.prepare(`
@@ -383,7 +502,7 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
             LIMIT ?
         `);
         const rows = stmt.all(normalizedPrefix, lang, limit) as { word: string }[];
-        return rows.map(r => r.word);
+        dbRows = rows.map(r => r.word);
     } else {
         if (!suggestStmt) {
             suggestStmt = database.prepare(`
@@ -396,6 +515,10 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
             `);
         }
         const rows = suggestStmt.all(normalizedPrefix, limit) as { word: string }[];
-        return rows.map(r => r.word);
+        dbRows = rows.map(r => r.word);
     }
+
+    // Gộp gợi ý từ Custom Words và Database, loại bỏ trùng lặp
+    const merged = Array.from(new Set([...customList, ...dbRows]));
+    return merged.slice(0, limit);
 }
