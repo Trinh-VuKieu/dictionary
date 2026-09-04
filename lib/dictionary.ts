@@ -78,6 +78,7 @@ const RELATION_LABELS: Record<string, string> = {
 import { LANG_LABELS } from './lang_labels';
 import { getCustomWord, getCustomSuggestions } from './custom_words';
 import { getContraction, getLemmas, CONTRACTIONS } from './morphology';
+import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
 
 
 
@@ -427,6 +428,32 @@ export function lookupWord(word: string, lang?: string): MultiLookupResult {
     const dbResult = lookupDirectFromDb(cleanWord, lang);
     if (dbResult.exists) {
         return dbResult;
+    }
+
+    // 2.1. Tra cứu Số (Numbers Engine: 0, 1, 100, 2024, 3.14, 1st, 2nd, IV, X...)
+    const numberResults = parseNumberEntry(cleanWord);
+    if (numberResults && numberResults.length > 0) {
+        const filtered = lang ? numberResults.filter(r => r.lang_code === lang) : numberResults;
+        if (filtered.length > 0) {
+            return {
+                exists: true,
+                word: cleanWord,
+                results: filtered
+            };
+        }
+    }
+
+    // 2.2. Tra cứu Thời gian (Time Engine: 10:30, 10h30, 10:30am, 12:00, 7pm...)
+    const timeResults = parseTimeEntry(cleanWord);
+    if (timeResults && timeResults.length > 0) {
+        const filtered = lang ? timeResults.filter(r => r.lang_code === lang) : timeResults;
+        if (filtered.length > 0) {
+            return {
+                exists: true,
+                word: cleanWord,
+                results: filtered
+            };
+        }
     }
 
     // 3. Tra cứu bảng toàn bộ từ viết tắt tiếng Anh (Contractions Engine: he's, won't, don't, they're...)

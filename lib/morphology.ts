@@ -124,6 +124,29 @@ export function getLemmas(word: string): LemmaResult[] {
                 explanation: `Dạng so sánh hơn / so sánh nhất của tính từ "${adjLemma}".`
             });
         }
+
+        // 4. Phó từ đuôi -ly (usually -> usual, really -> real, rarely -> rare, happily -> happy, quickly -> quick)
+        if (lower.endsWith('ily') && lower.length > 4) {
+            const adjBase = lower.slice(0, -3) + 'y';
+            if (!seen.has(adjBase)) {
+                seen.add(adjBase);
+                results.push({
+                    lemma: adjBase,
+                    posType: 'adjective',
+                    explanation: `Phó từ / Trạng từ được cấu tạo từ tính từ "${adjBase}" + đuôi "-ly".`
+                });
+            }
+        } else if (lower.endsWith('ly') && lower.length > 3) {
+            const adjBase = lower.slice(0, -2);
+            if (!seen.has(adjBase)) {
+                seen.add(adjBase);
+                results.push({
+                    lemma: adjBase,
+                    posType: 'adjective',
+                    explanation: `Phó từ / Trạng từ được cấu tạo từ tính từ "${adjBase}" + đuôi "-ly".`
+                });
+            }
+        }
     } catch (e) {
         console.error('Error lemmatizing word:', e);
     }

@@ -247,6 +247,174 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
         word: "classes",
         aliasTo: "class",
         note: "Dạng số nhiều của danh từ 'class' (các lớp học, các tầng lớp) hoặc dạng chia ngôi thứ 3 số ít thì hiện tại đơn của động từ 'class' (phân loại)."
+    },
+
+    // 4. Các từ cơ bản tiếng Anh bị thiếu trong database gốc
+    "why": {
+        word: "why",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=why&lang=en",
+            meanings: [
+                { definition: "Tại sao, vì sao (từ để hỏi nguyên nhân, lý do).", definition_lang: "vi", example: "Why are you late? / Tell me why.", pos: "Phó từ / Đại từ nghi vấn", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Lý do, nguyên cớ (danh từ).", definition_lang: "vi", example: "the whys and wherefores (lý do ngọn ngành)", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/waɪ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "tại sao / vì sao" }],
+            relations: []
+        }]
+    },
+
+    "which": {
+        word: "which",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=which&lang=en",
+            meanings: [
+                { definition: "Nào, cái nào, người nào (dùng để hỏi hoặc lựa chọn giữa các đối tượng).", definition_lang: "vi", example: "Which color do you prefer?", pos: "Đại từ nghi vấn", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Mà, điều mà (đại từ quan hệ thay thế cho sự vật, sự việc).", definition_lang: "vi", example: "The book which I bought yesterday.", pos: "Đại từ quan hệ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/wɪtʃ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "cái nào / mà" }],
+            relations: []
+        }]
+    },
+
+    "whose": {
+        word: "whose",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=whose&lang=en",
+            meanings: [
+                { definition: "Của ai (từ để hỏi về quyền sở hữu).", definition_lang: "vi", example: "Whose coat is this?", pos: "Đại từ nghi vấn", sub_pos: null, source: "Custom", links: ["who"] },
+                { definition: "Của người mà, mà có (đại từ quan hệ chỉ sở hữu).", definition_lang: "vi", example: "A woman whose car was stolen.", pos: "Đại từ quan hệ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/huːz/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "của ai" }],
+            relations: [{ related_word: "who", relation_type: "Gốc từ" }]
+        }]
+    },
+
+    "only": {
+        word: "only",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=only&lang=en",
+            meanings: [
+                { definition: "Chỉ, duy nhất (phó từ).", definition_lang: "vi", example: "I only have five dollars. / If only I knew.", pos: "Phó từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Duy nhất, độc nhất (tính từ).", definition_lang: "vi", example: "an only child (con một) / the only way", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈəʊn.li/", region: "UK" }, { ipa: "/ˈoʊn.li/", region: "US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "chỉ / duy nhất" }],
+            relations: []
+        }]
+    },
+
+    "quite": {
+        word: "quite",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=quite&lang=en",
+            meanings: [
+                { definition: "Khá, tương đối (mức độ trung bình).", definition_lang: "vi", example: "It's quite warm today.", pos: "Phó từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Hoàn toàn, tuyệt đối.", definition_lang: "vi", example: "I'm not quite sure.", pos: "Phó từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/kwaɪt/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "khá / hoàn toàn" }],
+            relations: []
+        }]
+    },
+
+    "hers": {
+        word: "hers",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=hers&lang=en",
+            meanings: [
+                { definition: "Của cô ấy, của bà ấy (đại từ sở hữu thay thế cho danh từ).", definition_lang: "vi", example: "This bag is hers.", pos: "Đại từ", sub_pos: "Đại từ sở hữu", source: "Custom", links: ["her", "she"] }
+            ],
+            pronunciations: [{ ipa: "/hɜːz/", region: "UK" }, { ipa: "/hɝːz/", region: "US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "của cô ấy" }],
+            relations: [{ related_word: "she", relation_type: "Gốc từ" }, { related_word: "her", relation_type: "Liên quan" }]
+        }]
+    },
+
+    "theirs": {
+        word: "theirs",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=theirs&lang=en",
+            meanings: [
+                { definition: "Của họ, của chúng nó (đại từ sở hữu thay thế cho danh từ).", definition_lang: "vi", example: "That house is theirs.", pos: "Đại từ", sub_pos: "Đại từ sở hữu", source: "Custom", links: ["their", "they"] }
+            ],
+            pronunciations: [{ ipa: "/ðeəz/", region: "UK" }, { ipa: "/ðerz/", region: "US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "của họ" }],
+            relations: [{ related_word: "they", relation_type: "Gốc từ" }, { related_word: "their", relation_type: "Liên quan" }]
+        }]
+    },
+
+    "yourself": {
+        word: "yourself",
+        aliasTo: "you",
+        note: "Đại từ phản thân của 'you' (chính bạn / tự bản thân bạn). Ví dụ: Take care of yourself."
+    },
+
+    "himself": {
+        word: "himself",
+        aliasTo: "he",
+        note: "Đại từ phản thân của 'he' (chính anh ấy / tự bản thân anh ấy). Ví dụ: He did it himself."
+    },
+
+    "herself": {
+        word: "herself",
+        aliasTo: "she",
+        note: "Đại từ phản thân của 'she' (chính cô ấy / tự bản thân cô ấy). Ví dụ: She lives by herself."
+    },
+
+    "ourselves": {
+        word: "ourselves",
+        aliasTo: "we",
+        note: "Đại từ phản thân của 'we' (chính chúng tôi / chính chúng ta). Ví dụ: We saw it ourselves."
+    },
+
+    "themselves": {
+        word: "themselves",
+        aliasTo: "they",
+        note: "Đại từ phản thân của 'they' (chính họ / chính chúng nó). Ví dụ: They solved the problem themselves."
+    },
+
+    "having": {
+        word: "having",
+        aliasTo: "have",
+        note: "Dạng phân từ hiện tại (present participle) hoặc danh động từ (gerund) của động từ 'have' (đang có, trải qua)."
+    },
+
+    "o'clock": {
+        word: "o'clock",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=o'clock&lang=en",
+            meanings: [
+                { definition: "Giờ đúng (viết tắt của 'of the clock', dùng sau số từ để chỉ giờ chính xác).", definition_lang: "vi", example: "It's 7 o'clock in the morning.", pos: "Phó từ / Thành ngữ", sub_pos: "Chỉ thời gian", source: "Custom", links: ["clock", "time"] }
+            ],
+            pronunciations: [{ ipa: "/əˈklɒk/", region: "UK" }, { ipa: "/əˈklɑːk/", region: "US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "giờ đúng" }],
+            relations: [{ related_word: "clock", relation_type: "Gốc từ" }]
+        }]
+    },
+
+    "apr": {
+        word: "apr",
+        aliasTo: "april",
+        note: "Dạng viết tắt của tháng Tư (April)."
     }
 };
 

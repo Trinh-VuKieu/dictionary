@@ -116,6 +116,58 @@ describe('Dictionary Module', () => {
             expect(result.results.length).toBeGreaterThan(0)
             expect(result.results[0].meanings[0].definition).toContain("funny")
         })
+
+        it('should handle numbers like 1, 100, 2024', () => {
+            const res1 = lookupWord("1")
+            expect(res1.exists).toBe(true)
+
+            const res100 = lookupWord("100")
+            expect(res100.exists).toBe(true)
+            expect(res100.results[0].meanings[0].definition).toContain("one hundred")
+
+            const res2024 = lookupWord("2024")
+            expect(res2024.exists).toBe(true)
+            expect(res2024.results[0].meanings[0].definition).toContain("two thousand")
+        })
+
+        it('should handle ordinal numbers like 1st, 2nd', () => {
+            const res1st = lookupWord("1st")
+            expect(res1st.exists).toBe(true)
+            expect(res1st.results[0].meanings[0].definition).toContain("first")
+        })
+
+        it('should handle Roman numerals like IV, X', () => {
+            const resIV = lookupWord("IV")
+            expect(resIV.exists).toBe(true)
+            expect(resIV.results[0].meanings[0].definition).toContain("4")
+        })
+
+        it('should handle time formats like 10:30, 7am', () => {
+            const resTime = lookupWord("10:30")
+            expect(resTime.exists).toBe(true)
+            expect(resTime.results[0].meanings[0].definition).toContain("ten thirty")
+
+            const res7am = lookupWord("7am")
+            expect(res7am.exists).toBe(true)
+        })
+
+        it('should handle essential core words: why, which, whose, only, o\'clock', () => {
+            expect(lookupWord("why").exists).toBe(true)
+            expect(lookupWord("which").exists).toBe(true)
+            expect(lookupWord("whose").exists).toBe(true)
+            expect(lookupWord("only").exists).toBe(true)
+            expect(lookupWord("o'clock").exists).toBe(true)
+        })
+
+        it('should handle -ly adverbs like usually, really, rarely', () => {
+            const resUsually = lookupWord("usually")
+            expect(resUsually.exists).toBe(true)
+            expect(resUsually.results.length).toBeGreaterThan(0)
+
+            const resReally = lookupWord("really")
+            expect(resReally.exists).toBe(true)
+            expect(resReally.results.length).toBeGreaterThan(0)
+        })
     })
 
     describe('getSuggestions', () => {
