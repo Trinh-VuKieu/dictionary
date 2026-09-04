@@ -1,4 +1,4 @@
-import { MultiLookupResult, LanguageResult, MeaningResult } from './dictionary';
+import { MultiLookupResult, LanguageResult, DictionaryMeaning } from './dictionary';
 
 // In-memory cache for Wiktionary definitions
 const WIKTIONARY_CACHE = new Map<string, MultiLookupResult>();
@@ -48,7 +48,7 @@ export async function lookupWiktionaryFallback(query: string, preferredLang?: st
         const [wiktionaryData, gtxData] = await Promise.all([wiktionaryPromise, gtxPromise]);
         clearTimeout(timeoutId);
 
-        const meanings: MeaningResult[] = [];
+        const meanings: DictionaryMeaning[] = [];
 
         // Trích xuất bản dịch tiếng Việt từ Google
         let viTranslation = '';
