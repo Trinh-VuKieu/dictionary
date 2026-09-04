@@ -15,6 +15,127 @@ export interface CustomWordEntry {
  * Cách 2: Trỏ về từ gốc (aliasTo) kèm ghi chú ngữ pháp (như "classes" -> trỏ về "class")
  */
 export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
+    // 0. Từ "my" (bị thiếu trong database gốc)
+    "my": {
+        word: "my",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=my&lang=en",
+                meanings: [
+                    {
+                        definition: "Của tôi (tính từ sở hữu, đứng trước danh từ).",
+                        definition_lang: "vi",
+                        example: "This is my book. / My name is John.",
+                        pos: "Đại từ",
+                        sub_pos: "Tính từ sở hữu",
+                        source: "Custom",
+                        links: ["I", "me", "mine"]
+                    },
+                    {
+                        definition: "Of or belonging to me (used to indicate that something belongs to or relates to the speaker).",
+                        definition_lang: "en",
+                        example: "My family lives here.",
+                        pos: "Pronoun",
+                        sub_pos: "Possessive determiner",
+                        source: "Custom",
+                        links: []
+                    },
+                    {
+                        definition: "Trời ơi! (thán từ biểu lộ sự ngạc nhiên, thường dùng: My, my! hoặc My goodness!).",
+                        definition_lang: "vi",
+                        example: "My, my! What a lovely surprise!",
+                        pos: "Thán từ",
+                        sub_pos: null,
+                        source: "Custom",
+                        links: []
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/maɪ/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "của tôi" }
+                ],
+                relations: [
+                    { related_word: "I", relation_type: "Gốc từ" },
+                    { related_word: "me", relation_type: "Liên quan" },
+                    { related_word: "mine", relation_type: "Đại từ sở hữu" }
+                ]
+            },
+            {
+                lang_code: "vi",
+                lang_name: "Tiếng Việt",
+                audio: "/api/v1/tts?word=m%E1%BB%B9&lang=vi",
+                meanings: [
+                    {
+                        definition: "Nước Mỹ (Hợp chúng quốc Hoa Kỳ).",
+                        definition_lang: "vi",
+                        example: "Đi du học Mỹ.",
+                        pos: "Danh từ",
+                        sub_pos: "Danh từ riêng",
+                        source: "Custom",
+                        links: ["hoa kỳ"]
+                    },
+                    {
+                        definition: "Đẹp, tốt lành (yếu tố Hán-Việt trong: mỹ thuật, mỹ mãn, hoa mỹ, mỹ lệ).",
+                        definition_lang: "vi",
+                        example: "Tác phẩm mỹ thuật.",
+                        pos: "Tính từ",
+                        sub_pos: null,
+                        source: "Custom",
+                        links: []
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "mi˧ˀ˥", region: "Hà Nội" }
+                ],
+                translations: [],
+                relations: []
+            }
+        ]
+    },
+
+    // 0.1. Từ "his"
+    "his": {
+        word: "his",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=his&lang=en",
+                meanings: [
+                    {
+                        definition: "Của anh ấy, của ông ấy, của nó (chỉ người hoặc động vật đực).",
+                        definition_lang: "vi",
+                        example: "His father is a doctor. / That car is his.",
+                        pos: "Đại từ",
+                        sub_pos: "Tính từ sở hữu / Đại từ sở hữu",
+                        source: "Custom",
+                        links: ["he", "him"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/hɪz/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "của anh ấy" }
+                ],
+                relations: [
+                    { related_word: "he", relation_type: "Gốc từ" }
+                ]
+            }
+        ]
+    },
+
+    // 0.2. Từ "these" (số nhiều của this)
+    "these": {
+        word: "these",
+        aliasTo: "this",
+        note: "Dạng số nhiều của đại từ / tính từ chỉ định 'this' (những cái này, những người này)."
+    },
+
     // 1. Từ viết tắt "he's"
     "he's": {
         word: "he's",

@@ -57,6 +57,16 @@ describe('Dictionary Module', () => {
             }
         })
 
+        it('should find word "my"', () => {
+            const result = lookupWord('my')
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe('my')
+            expect(result.results.length).toBeGreaterThan(0)
+            const enResult = result.results.find(r => r.lang_code === 'en')
+            expect(enResult).toBeDefined()
+            expect(enResult!.meanings[0].definition).toContain('Của tôi')
+        })
+
         it('should find custom contraction "he\'s"', () => {
             const result = lookupWord("he's")
             expect(result.exists).toBe(true)
