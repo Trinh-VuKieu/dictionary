@@ -366,6 +366,12 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
         note: "Đại từ phản thân của 'you' (chính bạn / tự bản thân bạn). Ví dụ: Take care of yourself."
     },
 
+    "yourselves": {
+        word: "yourselves",
+        aliasTo: "you",
+        note: "Đại từ phản thân số nhiều của 'you' (chính các bạn / tự bản thân các bạn). Ví dụ: Help yourselves."
+    },
+
     "himself": {
         word: "himself",
         aliasTo: "he",

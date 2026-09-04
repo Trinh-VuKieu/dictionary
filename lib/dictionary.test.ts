@@ -300,6 +300,89 @@ describe('Dictionary Module', () => {
         }, 10000)
     })
 
+    describe('All English Variants & Inflections', () => {
+        it('should handle possessive case (dog\'s, teacher\'s, mary\'s, students\')', async () => {
+            const resDogs = await lookupWord("dog's")
+            expect(resDogs.exists).toBe(true)
+            expect(resDogs.results[0].meanings[0].definition).toContain("sở hữu cách")
+
+            const resTeachers = await lookupWord("teacher's")
+            expect(resTeachers.exists).toBe(true)
+
+            const resMarys = await lookupWord("mary's")
+            expect(resMarys.exists).toBe(true)
+
+            const resStudents = await lookupWord("students'")
+            expect(resStudents.exists).toBe(true)
+        })
+
+        it('should handle informal and modal contractions (gonna, wanna, gotta, kinda, dunno, lemme, y\'all, needn\'t, shan\'t)', async () => {
+            expect((await lookupWord("gonna")).exists).toBe(true)
+            expect((await lookupWord("wanna")).exists).toBe(true)
+            expect((await lookupWord("gotta")).exists).toBe(true)
+            expect((await lookupWord("kinda")).exists).toBe(true)
+            expect((await lookupWord("dunno")).exists).toBe(true)
+            expect((await lookupWord("lemme")).exists).toBe(true)
+            expect((await lookupWord("gimme")).exists).toBe(true)
+            expect((await lookupWord("y'all")).exists).toBe(true)
+            expect((await lookupWord("needn't")).exists).toBe(true)
+            expect((await lookupWord("shan't")).exists).toBe(true)
+            expect((await lookupWord("oughtn't")).exists).toBe(true)
+        })
+
+        it('should handle all pronoun variants (yourselves, myself, himself, herself, ourselves, themselves)', async () => {
+            expect((await lookupWord("yourselves")).exists).toBe(true)
+            expect((await lookupWord("myself")).exists).toBe(true)
+            expect((await lookupWord("himself")).exists).toBe(true)
+            expect((await lookupWord("herself")).exists).toBe(true)
+            expect((await lookupWord("themselves")).exists).toBe(true)
+        })
+
+        it('should handle British vs American spelling variants (colour, organise, theatre, cancelled)', async () => {
+            const resColour = await lookupWord("colour")
+            expect(resColour.exists).toBe(true)
+
+            const resOrganise = await lookupWord("organise")
+            expect(resOrganise.exists).toBe(true)
+
+            const resTheatre = await lookupWord("theatre")
+            expect(resTheatre.exists).toBe(true)
+        })
+
+        it('should handle irregular verb forms (went, gone, drunk, eaten, written, flown, began)', async () => {
+            expect((await lookupWord("went")).exists).toBe(true)
+            expect((await lookupWord("gone")).exists).toBe(true)
+            expect((await lookupWord("drunk")).exists).toBe(true)
+            expect((await lookupWord("eaten")).exists).toBe(true)
+            expect((await lookupWord("written")).exists).toBe(true)
+            expect((await lookupWord("flown")).exists).toBe(true)
+        })
+
+        it('should handle doubled consonant V-ing and V-ed (running, stopping, planning, winning, cutting)', async () => {
+            expect((await lookupWord("running")).exists).toBe(true)
+            expect((await lookupWord("stopping")).exists).toBe(true)
+            expect((await lookupWord("planning")).exists).toBe(true)
+            expect((await lookupWord("winning")).exists).toBe(true)
+            expect((await lookupWord("stopped")).exists).toBe(true)
+            expect((await lookupWord("planned")).exists).toBe(true)
+        })
+
+        it('should handle negative prefixes (unhappy, unable, unfair, impossible, dislike, nonstop)', async () => {
+            expect((await lookupWord("unhappy")).exists).toBe(true)
+            expect((await lookupWord("unable")).exists).toBe(true)
+            expect((await lookupWord("unfair")).exists).toBe(true)
+            expect((await lookupWord("impossible")).exists).toBe(true)
+            expect((await lookupWord("dislike")).exists).toBe(true)
+            expect((await lookupWord("nonstop")).exists).toBe(true)
+        })
+
+        it('should handle essential adverbs like quite, very, really', async () => {
+            const resQuite = await lookupWord("quite")
+            expect(resQuite.exists).toBe(true)
+            expect(resQuite.results[0].meanings[0].definition).toContain("Khá")
+        })
+    })
+
     describe('getSuggestions', () => {
         it('should return suggestions for prefix', () => {
             const suggestions = getSuggestions('xin', 5)
@@ -364,5 +447,27 @@ describe('Dictionary Module', () => {
                 expect(Array.isArray(result.results[0].meanings[0].links)).toBe(true)
             }
         })
+    })
+
+    describe('TTS & Audio CORS endpoint', () => {
+        it('should respond to OPTIONS with CORS headers', async () => {
+            const { OPTIONS } = await import('../app/api/v1/tts/route');
+            const res = await OPTIONS();
+            expect(res.status).toBe(204);
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+            expect(res.headers.get('Access-Control-Allow-Methods')).toContain('GET');
+            expect(res.headers.get('Access-Control-Allow-Methods')).toContain('OPTIONS');
+        });
+
+        it('should return absolute audio URL in lookup response', async () => {
+            const { GET } = await import('../app/api/v1/lookup/route');
+            const req = new Request('http://localhost:3000/api/v1/lookup?word=quite');
+            const res = await GET(req);
+            expect(res.status).toBe(200);
+            const data = await res.json();
+            expect(data.exists).toBe(true);
+            expect(data.results[0].audio).toMatch(/^https?:\/\//);
+            expect(data.results[0].audio).toContain('/api/v1/tts?word=quite');
+        });
     })
 })

@@ -77,7 +77,7 @@ const RELATION_LABELS: Record<string, string> = {
 // Language labels - auto-generated from kaikki.org-dictionary-all.jsonl
 import { LANG_LABELS } from './lang_labels';
 import { getCustomWord, getCustomSuggestions } from './custom_words';
-import { getContraction, getLemmas, CONTRACTIONS } from './morphology';
+import { getContraction, getLemmas, getPossessive, getSpellingVariants, CONTRACTIONS } from './morphology';
 import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
 import { VN_UNACCENTED_PLACES, getPlaceOrName, getPlacesSuggestions } from './places_and_names';
 import { lookupWikiFallback } from './wiki_fallback';
@@ -528,6 +528,99 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
         }
     }
 
+    // 3.1. Tra cứu dạng sở hữu cách tiếng Anh (Possessive: dog's -> dog, teachers' -> teacher)
+    const possessive = getPossessive(cleanWord);
+    if (possessive) {
+        let baseResult = lookupDirectFromDb(possessive.base, lang || 'en');
+        if (!baseResult.exists) {
+            const placeRes = getPlaceOrName(possessive.base);
+            if (placeRes && placeRes.length > 0) {
+                baseResult = {
+                    exists: true,
+                    word: possessive.base,
+                    results: placeRes
+                };
+            }
+        }
+        if (!baseResult.exists) {
+            const baseLemmas = getLemmas(possessive.base);
+            for (const item of baseLemmas) {
+                const lemmaResult = lookupDirectFromDb(item.lemma, lang || 'en');
+                if (lemmaResult.exists) {
+                    baseResult = lemmaResult;
+                    break;
+                }
+            }
+        }
+        if (!baseResult.exists && possessive.base.endsWith('s') && possessive.base.length > 2) {
+            const singular = possessive.base.slice(0, -1);
+            const singularResult = lookupDirectFromDb(singular, lang || 'en');
+            if (singularResult.exists) {
+                baseResult = singularResult;
+            }
+        }
+        if (baseResult.exists) {
+            const results = baseResult.results.map(r => {
+                const noteMeaning: DictionaryMeaning = {
+                    definition: `${possessive.explanation} Hiển thị nghĩa của từ gốc "${possessive.base}":`,
+                    definition_lang: 'vi',
+                    example: null,
+                    pos: 'Dạng sở hữu cách',
+                    sub_pos: 'Sở hữu cách (Possessive case)',
+                    source: 'Possessive Engine',
+                    links: [possessive.base]
+                };
+                return {
+                    ...r,
+                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
+                    meanings: [noteMeaning, ...r.meanings],
+                    relations: [
+                        { related_word: possessive.base, relation_type: 'Gốc từ' },
+                        ...r.relations
+                    ]
+                };
+            });
+            return {
+                exists: true,
+                word: cleanWord,
+                results
+            };
+        }
+    }
+
+    // 3.2. Tra cứu biến thể chính tả Anh - Mỹ và từ ghép gạch nối (color <-> colour, well-known <-> well known)
+    const spellingVariants = getSpellingVariants(cleanWord);
+    for (const variant of spellingVariants) {
+        const variantResult = lookupDirectFromDb(variant, lang || 'en');
+        if (variantResult.exists) {
+            const results = variantResult.results.map(r => {
+                const noteMeaning: DictionaryMeaning = {
+                    definition: `Biến thể chính tả (Anh - Mỹ hoặc từ ghép) tương đương với "${variant}". Hiển thị nghĩa:`,
+                    definition_lang: 'vi',
+                    example: null,
+                    pos: 'Biến thể chính tả',
+                    sub_pos: 'US/UK Spelling Variant',
+                    source: 'Spelling Engine',
+                    links: [variant]
+                };
+                return {
+                    ...r,
+                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
+                    meanings: [noteMeaning, ...r.meanings],
+                    relations: [
+                        { related_word: variant, relation_type: 'Từ chuẩn' },
+                        ...r.relations
+                    ]
+                };
+            });
+            return {
+                exists: true,
+                word: cleanWord,
+                results
+            };
+        }
+    }
+
     // 4. Tra cứu tự động hình thái từ (Lemmatizer NLP Engine: bất quy tắc, số nhiều, chia thì, so sánh)
     const lemmas = getLemmas(cleanWord);
     for (const item of lemmas) {
@@ -602,6 +695,46 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                     meanings: [noteMeaning, ...r.meanings],
                     relations: [
                         { related_word: lemma, relation_type: 'Gốc từ' },
+                        ...r.relations
+                    ]
+                };
+            });
+            return {
+                exists: true,
+                word: cleanWord,
+                results
+            };
+        }
+    }
+
+    // 6. Tra cứu tiền tố phủ định tiếng Anh (un-, dis-, im-, in-, non-)
+    const prefixCandidates: { prefix: string; root: string }[] = [];
+    if (lowerWord.startsWith('un') && lowerWord.length > 4) prefixCandidates.push({ prefix: 'un-', root: lowerWord.slice(2) });
+    if (lowerWord.startsWith('dis') && lowerWord.length > 5) prefixCandidates.push({ prefix: 'dis-', root: lowerWord.slice(3) });
+    if (lowerWord.startsWith('im') && lowerWord.length > 4) prefixCandidates.push({ prefix: 'im-', root: lowerWord.slice(2) });
+    if (lowerWord.startsWith('in') && lowerWord.length > 4) prefixCandidates.push({ prefix: 'in-', root: lowerWord.slice(2) });
+    if (lowerWord.startsWith('non-')) prefixCandidates.push({ prefix: 'non-', root: lowerWord.slice(4) });
+    else if (lowerWord.startsWith('non') && lowerWord.length > 5) prefixCandidates.push({ prefix: 'non-', root: lowerWord.slice(3) });
+
+    for (const cand of prefixCandidates) {
+        const rootResult = lookupDirectFromDb(cand.root, lang || 'en');
+        if (rootResult.exists) {
+            const results = rootResult.results.map(r => {
+                const noteMeaning: DictionaryMeaning = {
+                    definition: `Từ ghép với tiền tố phủ định "${cand.prefix}" mang nghĩa phủ định hoặc trái ngược với "${cand.root}". Hiển thị nghĩa của từ gốc "${cand.root}":`,
+                    definition_lang: 'vi',
+                    example: null,
+                    pos: 'Từ mang tiền tố',
+                    sub_pos: 'Tiền tố phủ định (Negative Prefix)',
+                    source: 'Prefix Engine',
+                    links: [cand.root]
+                };
+                return {
+                    ...r,
+                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
+                    meanings: [noteMeaning, ...r.meanings],
+                    relations: [
+                        { related_word: cand.root, relation_type: 'Từ gốc' },
                         ...r.relations
                     ]
                 };

@@ -1,8 +1,30 @@
 import { NextResponse } from 'next/server';
 
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD',
+    'Access-Control-Allow-Headers': 'Content-Type, Range, User-Agent, Authorization',
+    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
+    'Accept-Ranges': 'bytes',
+};
+
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            ...CORS_HEADERS,
+            'Access-Control-Max-Age': '86400',
+        },
+    });
+}
+
+export async function HEAD(req: Request) {
+    return GET(req);
+}
+
 /**
  * API route: GET /api/v1/tts?word=...&lang=...
- * Proxies requests to Google Translate TTS
+ * Proxies requests to Google Translate TTS with full CORS support
  * Falls back to English then Vietnamese if specified language is not supported
  */
 export async function GET(req: Request) {
@@ -11,7 +33,10 @@ export async function GET(req: Request) {
     const lang = searchParams.get('lang') || 'vi';
 
     if (!word) {
-        return NextResponse.json({ error: 'Missing "word" parameter' }, { status: 400 });
+        return NextResponse.json(
+            { error: 'Missing "word" parameter' },
+            { status: 400, headers: CORS_HEADERS }
+        );
     }
 
     // Try languages in order: specified lang -> English -> Vietnamese
@@ -36,6 +61,7 @@ export async function GET(req: Request) {
                     headers: {
                         'Content-Type': 'audio/mpeg',
                         'Cache-Control': 'public, max-age=31536000, immutable',
+                        ...CORS_HEADERS,
                     },
                 });
             }
@@ -45,7 +71,8 @@ export async function GET(req: Request) {
     }
 
     console.log(`[TTS] FAIL "${word}" lang=${lang}`);
-    return NextResponse.json({ error: 'Failed to generate speech' }, { status: 500 });
+    return NextResponse.json(
+        { error: 'Failed to generate speech' },
+        { status: 500, headers: CORS_HEADERS }
+    );
 }
-
-
