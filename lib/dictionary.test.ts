@@ -469,5 +469,31 @@ describe('Dictionary Module', () => {
             expect(data.results[0].audio).toMatch(/^https?:\/\//);
             expect(data.results[0].audio).toContain('/api/v1/tts?word=quite');
         });
+
+        it('should accept Google TTS parameters (q, tl)', async () => {
+            const { GET } = await import('../app/api/v1/tts/route');
+            const req = new Request('http://localhost:3000/api/v1/tts?ie=UTF-8&tl=en&client=tw-ob&q=quite');
+            const res = await GET(req);
+            expect(res.status).toBe(200);
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+            expect(res.headers.get('Content-Type')).toBe('audio/mpeg');
+        });
+
+        it('should support /translate_tts route with Google query params', async () => {
+            const { GET } = await import('../app/translate_tts/route');
+            const req = new Request('http://localhost:3000/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=quite');
+            const res = await GET(req);
+            expect(res.status).toBe(200);
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+            expect(res.headers.get('Content-Type')).toBe('audio/mpeg');
+        });
+
+        it('should accept full Google TTS URL in ?url= parameter', async () => {
+            const { GET } = await import('../app/api/v1/tts/route');
+            const req = new Request('http://localhost:3000/api/v1/tts?url=https://translate.google.com/translate_tts?ie=UTF-8%26tl=en%26client=tw-ob%26q=quite');
+            const res = await GET(req);
+            expect(res.status).toBe(200);
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+        });
     })
 })

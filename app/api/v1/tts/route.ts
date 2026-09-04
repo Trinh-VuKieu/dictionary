@@ -29,12 +29,26 @@ export async function HEAD(req: Request) {
  */
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    const word = searchParams.get('word');
-    const lang = searchParams.get('lang') || 'vi';
+    
+    // Support standard params (word, lang) and Google TTS params (q, tl, text)
+    let word = searchParams.get('word') || searchParams.get('q') || searchParams.get('text');
+    let lang = searchParams.get('lang') || searchParams.get('tl') || 'en';
+
+    // Support passing full Google TTS URL via ?url=...
+    const rawUrl = searchParams.get('url');
+    if (rawUrl) {
+        try {
+            const parsed = new URL(rawUrl);
+            word = parsed.searchParams.get('q') || parsed.searchParams.get('word') || word;
+            lang = parsed.searchParams.get('tl') || parsed.searchParams.get('lang') || lang;
+        } catch {
+            // ignore invalid URL
+        }
+    }
 
     if (!word) {
         return NextResponse.json(
-            { error: 'Missing "word" parameter' },
+            { error: 'Missing "word" or "q" parameter' },
             { status: 400, headers: CORS_HEADERS }
         );
     }

@@ -34,6 +34,15 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Expose-Headers', value: 'Content-Length, Content-Range, Accept-Ranges' },
         ],
       },
+      {
+        source: '/translate_tts',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS, HEAD' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Range, User-Agent, Authorization' },
+          { key: 'Access-Control-Expose-Headers', value: 'Content-Length, Content-Range, Accept-Ranges' },
+        ],
+      },
     ];
   },
   async rewrites() {
