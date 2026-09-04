@@ -494,5 +494,13 @@ describe('Dictionary Module', () => {
             expect(res.status).toBe(200);
             expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
         });
+
+        it('should resolve rare medical / technical English words via Wiktionary fallback', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const result = await lookupWord('thyroparathyroidectomized');
+            expect(result.exists).toBe(true);
+            expect(result.results.length).toBeGreaterThan(0);
+            expect(result.results[0].meanings.length).toBeGreaterThan(0);
+        }, 10000);
     })
 })

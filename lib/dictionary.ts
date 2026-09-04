@@ -81,6 +81,7 @@ import { getContraction, getLemmas, getPossessive, getSpellingVariants, CONTRACT
 import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
 import { VN_UNACCENTED_PLACES, getPlaceOrName, getPlacesSuggestions } from './places_and_names';
 import { lookupWikiFallback } from './wiki_fallback';
+import { lookupWiktionaryFallback } from './wiktionary_fallback';
 
 
 
@@ -764,7 +765,7 @@ export async function lookupWord(word: string, lang?: string): Promise<MultiLook
         return syncResult;
     }
 
-    // Nếu hệ thống offline chưa có, tự động tra cứu Bách khoa toàn thư Wikipedia
+    // 1. Nếu hệ thống offline chưa có, tự động tra cứu Bách khoa toàn thư Wikipedia (địa danh, tên riêng, văn hóa)
     try {
         const wikiResult = await lookupWikiFallback(word, lang);
         if (wikiResult && wikiResult.exists) {
@@ -772,6 +773,16 @@ export async function lookupWord(word: string, lang?: string): Promise<MultiLook
         }
     } catch (e) {
         console.error('Wikipedia fallback error:', e);
+    }
+
+    // 2. Tra cứu Wiktionary & Từ điển Mở cho từ chuyên ngành, từ y khoa/khoa học cực hiếm, biến thể ngữ pháp hiếm
+    try {
+        const wiktionaryResult = await lookupWiktionaryFallback(word, lang);
+        if (wiktionaryResult && wiktionaryResult.exists) {
+            return wiktionaryResult;
+        }
+    } catch (e) {
+        console.error('Wiktionary fallback error:', e);
     }
 
     return syncResult;
