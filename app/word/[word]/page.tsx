@@ -11,7 +11,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const { word: encodedWord } = await params;
     const word = decodeWordSlug(encodedWord);
-    const result = lookupWord(word);
+    const result = await lookupWord(word);
 
     // Get all meanings for rich description
     const meanings = result.exists && result.results?.[0]?.meanings || [];
@@ -78,7 +78,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function WordPage({ params }: PageProps) {
     const { word: encodedWord } = await params;
     const word = decodeWordSlug(encodedWord);
-    const result = lookupWord(word);
+    const result = await lookupWord(word);
 
     // Convert to client-compatible format
     const clientResult = {

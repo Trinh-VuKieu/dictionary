@@ -79,6 +79,8 @@ import { LANG_LABELS } from './lang_labels';
 import { getCustomWord, getCustomSuggestions } from './custom_words';
 import { getContraction, getLemmas, CONTRACTIONS } from './morphology';
 import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
+import { VN_UNACCENTED_PLACES, getPlaceOrName, getPlacesSuggestions } from './places_and_names';
+import { lookupWikiFallback } from './wiki_fallback';
 
 
 
@@ -361,13 +363,9 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
 }
 
 /**
- * Look up a word in the dictionary (multi-language)
- * Supports Custom Words (he's, custom vocabulary) and Inflections (classes -> class)
- * @param word - The word to look up
- * @param lang - Optional language code to filter by
- * @returns MultiLookupResult with results grouped by language
+ * Tra cứu đồng bộ nội bộ (SQLite DB, Custom Words, Địa danh, Tên riêng, Số, Thời gian, Lemmatizer)
  */
-export function lookupWord(word: string, lang?: string): MultiLookupResult {
+export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     const cleanWord = word.trim().replace(/[’‘`]/g, "'");
 
     // 1. Kiểm tra trong Custom Words trước
@@ -419,6 +417,47 @@ export function lookupWord(word: string, lang?: string): MultiLookupResult {
                     exists: true,
                     word: customEntry.word,
                     results
+                };
+            }
+        }
+    }
+
+    // 1.1. Tra cứu Địa danh & Tên riêng trong danh mục Offline tốc độ cao (Places & Names DB)
+    const placeOrNameResults = getPlaceOrName(cleanWord);
+    if (placeOrNameResults && placeOrNameResults.length > 0) {
+        const filtered = lang ? placeOrNameResults.filter(r => r.lang_code === lang) : placeOrNameResults;
+        if (filtered.length > 0) {
+            return {
+                exists: true,
+                word: cleanWord,
+                results: filtered
+            };
+        }
+    }
+
+    // 1.2. Ánh xạ địa danh không dấu của Việt Nam sang có dấu (ha noi -> hà nội, da nang -> đà nẵng...)
+    const lowerClean = cleanWord.toLowerCase();
+    if (VN_UNACCENTED_PLACES[lowerClean]) {
+        const accentedTarget = VN_UNACCENTED_PLACES[lowerClean];
+        const accentedDbResult = lookupDirectFromDb(accentedTarget, lang);
+        if (accentedDbResult.exists) {
+            return {
+                exists: true,
+                word: accentedDbResult.word,
+                results: accentedDbResult.results.map(r => ({
+                    ...r,
+                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`
+                }))
+            };
+        }
+        const placeRes = getPlaceOrName(accentedTarget);
+        if (placeRes && placeRes.length > 0) {
+            const filtered = lang ? placeRes.filter(r => r.lang_code === lang) : placeRes;
+            if (filtered.length > 0) {
+                return {
+                    exists: true,
+                    word: accentedTarget,
+                    results: filtered
                 };
             }
         }
@@ -578,12 +617,39 @@ export function lookupWord(word: string, lang?: string): MultiLookupResult {
     return { exists: false, word: normalizeVietnamese(cleanWord.normalize('NFC').toLowerCase()), results: [] };
 }
 
+/**
+ * Tra cứu từ điển đa ngôn ngữ (Asynchronous)
+ * Tích hợp toàn bộ hệ thống Offline (SQLite, Custom, Địa danh 63 tỉnh thành, Quốc gia, Thủ đô, Sông hồ, Núi non, Nhân vật, Số, Thời gian, Lemmatizer)
+ * và Tự động Fallback sang Bách khoa toàn thư Wikipedia cho toàn bộ các thực thể bách khoa trên toàn cầu.
+ * @param word - Từ hoặc thực thể cần tra cứu
+ * @param lang - Tùy chọn mã ngôn ngữ ('vi', 'en'...)
+ * @returns MultiLookupResult
+ */
+export async function lookupWord(word: string, lang?: string): Promise<MultiLookupResult> {
+    const syncResult = lookupWordSync(word, lang);
+    if (syncResult.exists) {
+        return syncResult;
+    }
+
+    // Nếu hệ thống offline chưa có, tự động tra cứu Bách khoa toàn thư Wikipedia
+    try {
+        const wikiResult = await lookupWikiFallback(word, lang);
+        if (wikiResult && wikiResult.exists) {
+            return wikiResult;
+        }
+    } catch (e) {
+        console.error('Wikipedia fallback error:', e);
+    }
+
+    return syncResult;
+}
+
 // Prepared statement for suggestions (lazy loaded)
 let suggestStmt: Database.Statement | null = null;
 
 /**
  * Get word suggestions based on prefix
- * Combines suggestions from Custom Words, Contractions, and SQLite Database
+ * Combines suggestions from Custom Words, Contractions, Places & Names, and SQLite Database
  * @param prefix - The prefix to search for
  * @param limit - Maximum number of suggestions to return
  * @param lang - Optional language code to filter by
@@ -595,6 +661,7 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
     const contractionSuggestions = Object.keys(CONTRACTIONS)
         .filter(k => k.startsWith(cleanPrefix))
         .slice(0, limit);
+    const placesSuggestions = getPlacesSuggestions(cleanPrefix, limit);
 
     const database = getDb();
     const normalizedPrefix = normalizeVietnamese(prefix.normalize('NFC').toLowerCase());
@@ -624,7 +691,7 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
         dbRows = rows.map(r => r.word);
     }
 
-    // Gộp gợi ý từ Custom Words, Contractions và Database, loại bỏ trùng lặp
-    const merged = Array.from(new Set([...customList, ...contractionSuggestions, ...dbRows]));
+    // Gộp gợi ý từ Custom Words, Contractions, Places và Database, loại bỏ trùng lặp
+    const merged = Array.from(new Set([...customList, ...contractionSuggestions, ...placesSuggestions, ...dbRows]));
     return merged.slice(0, limit);
 }

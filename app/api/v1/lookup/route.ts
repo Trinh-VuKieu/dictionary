@@ -36,7 +36,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Missing "word" parameter' }, { status: 400 });
     }
 
-    const result = lookupWord(word, lang);
+    const result = await lookupWord(word, lang);
 
     if (!result.exists || result.results.length === 0) {
         return NextResponse.json({ exists: false, word: result.word }, { status: 404, headers: CACHE_HEADERS });
