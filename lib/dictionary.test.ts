@@ -459,15 +459,14 @@ describe('Dictionary Module', () => {
             expect(res.headers.get('Access-Control-Allow-Methods')).toContain('OPTIONS');
         });
 
-        it('should return absolute audio URL in lookup response', async () => {
+        it('should return relative audio URL in lookup response for backend client composition', async () => {
             const { GET } = await import('../app/api/v1/lookup/route');
             const req = new Request('http://localhost:3000/api/v1/lookup?word=quite');
             const res = await GET(req);
             expect(res.status).toBe(200);
             const data = await res.json();
             expect(data.exists).toBe(true);
-            expect(data.results[0].audio).toMatch(/^https?:\/\//);
-            expect(data.results[0].audio).toContain('/api/v1/tts?word=quite');
+            expect(data.results[0].audio).toBe('/api/v1/tts?word=quite&lang=en');
         });
 
         it('should accept Google TTS parameters (q, tl)', async () => {
