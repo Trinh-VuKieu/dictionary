@@ -1,9 +1,10 @@
-import { LanguageResult } from './dictionary';
+import { LanguageResult, DictionaryPronunciation } from './dictionary';
 
 export interface CustomWordEntry {
     word: string;
     aliasTo?: string; // Tùy chọn: Chuyển hướng lấy nghĩa từ từ gốc (ví dụ classes -> class)
     note?: string; // Ghi chú ngữ pháp (ví dụ: Dạng số nhiều của 'class')
+    pronunciations?: DictionaryPronunciation[]; // Phiên âm tùy chọn khi dùng aliasTo
     results?: LanguageResult[]; // Dữ liệu định nghĩa tùy chỉnh riêng
 }
 
@@ -247,6 +248,44 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
         word: "classes",
         aliasTo: "class",
         note: "Dạng số nhiều của danh từ 'class' (các lớp học, các tầng lớp) hoặc dạng chia ngôi thứ 3 số ít thì hiện tại đơn của động từ 'class' (phân loại)."
+    },
+
+    // 3.1. Các từ số nhiều thông dụng bị dữ liệu rác hoặc thiếu nghĩa trong SQLite gốc
+    "moments": {
+        word: "moments",
+        aliasTo: "moment",
+        note: "Dạng số nhiều của danh từ 'moment' (những khoảnh khắc, giây phút, thời điểm, chốc lát).",
+        pronunciations: [{ ipa: "/ˈmoʊ.mənts/", region: "US/UK" }]
+    },
+    "minutes": {
+        word: "minutes",
+        aliasTo: "minute",
+        note: "Dạng số nhiều của danh từ 'minute' (các phút, khoảng thời gian ngắn) hoặc biên bản cuộc họp.",
+        pronunciations: [{ ipa: "/ˈmɪn.ɪts/", region: "US/UK" }]
+    },
+    "seconds": {
+        word: "seconds",
+        aliasTo: "second",
+        note: "Dạng số nhiều của danh từ 'second' (các giây) hoặc người phụ tá, hàng loại hai.",
+        pronunciations: [{ ipa: "/ˈsɛk.əndz/", region: "US/UK" }]
+    },
+    "glasses": {
+        word: "glasses",
+        aliasTo: "glass",
+        note: "Kính mắt, kính đeo mắt (danh từ số nhiều luôn có đuôi -es) hoặc dạng số nhiều của 'glass' (những chiếc cốc, ly thủy tinh).",
+        pronunciations: [{ ipa: "/ˈɡlæs.ɪz/", region: "US/UK" }]
+    },
+    "books": {
+        word: "books",
+        aliasTo: "book",
+        note: "Dạng số nhiều của danh từ 'book' (những cuốn sách, quyển vở).",
+        pronunciations: [{ ipa: "/bʊks/", region: "US/UK" }]
+    },
+    "children": {
+        word: "children",
+        aliasTo: "child",
+        note: "Dạng số nhiều (bất quy tắc) của danh từ 'child' (những đứa trẻ, các con).",
+        pronunciations: [{ ipa: "/ˈtʃɪl.drən/", region: "US/UK" }]
     },
 
     // 4. Các từ cơ bản tiếng Anh bị thiếu trong database gốc

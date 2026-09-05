@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "install-db": "node -e \"const fs=require('fs');const p='./lib/dictionary.db';if(!fs.existsSync(p)||fs.statSync(p).size<10000000){fs.mkdirSync('./lib',{recursive:true});require('child_process').execSync('curl --fail -L -o ./lib/dictionary.db https://github.com/minhqnd/dictionary/releases/latest/download/dictionary.db',{stdio:'inherit'});}else{console.log('Valid DB exists (' + Math.round(fs.statSync(p).size/1024/1024) + 'MB), skipping download');}\"",
+    "install-db": "mkdir -p ./lib && ([ -f ./lib/dictionary.db ] && echo 'DB exists, skipping download' || curl --fail -L -o ./lib/dictionary.db https://github.com/minhqnd/dictionary/releases/latest/download/dictionary.db)",
     "build": "npm run install-db && next build",
     "start": "next start",
     "lint": "eslint",

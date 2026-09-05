@@ -104,6 +104,76 @@ describe('Dictionary Module', () => {
             expect(result.results[0].meanings[0].definition).toContain("class")
         })
 
+        it('should resolve plural "moments" with full meanings of "moment" and proper IPA', async () => {
+            const result = await lookupWord("moments")
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe("moments")
+            const en = result.results.find(r => r.lang_code === 'en')
+            expect(en).toBeDefined()
+            expect(en!.pronunciations.length).toBeGreaterThan(0)
+            expect(en!.pronunciations[0].ipa).toContain("moʊ.mənt")
+            // Must contain common life meanings like "Chốc, lúc, lát" or note
+            const defs = en!.meanings.map(m => m.definition).join(' ')
+            expect(defs).toContain("moment")
+            expect(defs).toMatch(/chốc|lúc|lát|khoảnh khắc/i)
+        })
+
+        it('should resolve plural "minutes" with time meanings instead of just 3rd person singular', async () => {
+            const result = await lookupWord("minutes")
+            expect(result.exists).toBe(true)
+            const en = result.results.find(r => r.lang_code === 'en')
+            expect(en).toBeDefined()
+            expect(en!.pronunciations.length).toBeGreaterThan(0)
+            const defs = en!.meanings.map(m => m.definition).join(' ')
+            expect(defs).toMatch(/phút|thời gian|biên bản/i)
+        })
+
+        it('should resolve plural "seconds" with time and ranking meanings', async () => {
+            const result = await lookupWord("seconds")
+            expect(result.exists).toBe(true)
+            const en = result.results.find(r => r.lang_code === 'en')
+            expect(en).toBeDefined()
+            const defs = en!.meanings.map(m => m.definition).join(' ')
+            expect(defs).toMatch(/thứ hai|giây/i)
+        })
+
+        it('should resolve irregular plural "children" with full child definitions and IPA', async () => {
+            const result = await lookupWord("children")
+            expect(result.exists).toBe(true)
+            const en = result.results.find(r => r.lang_code === 'en')
+            expect(en).toBeDefined()
+            expect(en!.pronunciations.length).toBeGreaterThan(0)
+            const defs = en!.meanings.map(m => m.definition).join(' ')
+            expect(defs).toMatch(/đứa bé|đứa trẻ|con cái|child/i)
+        })
+
+        it('should resolve irregular plural "teeth" with tooth definitions via automatic DB lemma enrichment', async () => {
+            const result = await lookupWord("teeth")
+            expect(result.exists).toBe(true)
+            const en = result.results.find(r => r.lang_code === 'en')
+            expect(en).toBeDefined()
+            const defs = en!.meanings.map(m => m.definition).join(' ')
+            expect(defs).toMatch(/răng|tooth/i)
+        })
+
+        it('should resolve past tense "walked" with full walk definitions via automatic DB lemma enrichment', async () => {
+            const result = await lookupWord("walked")
+            expect(result.exists).toBe(true)
+            const en = result.results.find(r => r.lang_code === 'en')
+            expect(en).toBeDefined()
+            const defs = en!.meanings.map(m => m.definition).join(' ')
+            expect(defs).toMatch(/đi bộ|dạo chơi|walk/i)
+        })
+
+        it('should automatically enrich shadowed SQLite word "abbreviations" with root definitions', async () => {
+            const result = await lookupWord("abbreviations")
+            expect(result.exists).toBe(true)
+            const en = result.results.find(r => r.lang_code === 'en')
+            expect(en).toBeDefined()
+            const defs = en!.meanings.map(m => m.definition).join(' ')
+            expect(defs).toMatch(/tóm tắt|viết tắt/i)
+        })
+
         it('should find superlative "happiest" mapping to "happy"', async () => {
             const result = await lookupWord("happiest")
             expect(result.exists).toBe(true)

@@ -388,6 +388,100 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
 }
 
 /**
+ * Kiểm tra định nghĩa có phải là mô tả ngữ pháp meta (Số nhiều của..., Quá khứ của...)
+ */
+function isMetaGrammarDefinition(def: string): boolean {
+    const trimmed = def.trim().toLowerCase();
+    return /^(số nhiều|dạng quá khứ|quá khứ|phân từ|dạng phân từ|động từ chia|dạng ngôi thứ|so sánh hơn|so sánh nhất|danh động từ)/i.test(trimmed) ||
+           /^(dạng\s+)?(quá khứ|phân từ|ngôi thứ ba|số nhiều).+của\s+[a-z]+/i.test(trimmed);
+}
+
+/**
+ * Tự động làm giàu các từ tiếng Anh bị thiếu nghĩa hoặc chỉ có định nghĩa meta bằng cách lấy nghĩa từ từ gốc (lemma)
+ */
+function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: LanguageResult): LanguageResult {
+    const lowerWord = cleanWord.toLowerCase();
+    const lemmas = getLemmas(lowerWord);
+    if (!lemmas || lemmas.length === 0) {
+        return currentResult;
+    }
+
+    const hasMetaDef = currentResult.meanings.some(m => isMetaGrammarDefinition(m.definition));
+    const isPoorDefs = currentResult.meanings.length <= 1;
+
+    // Nếu không có định nghĩa meta và đã có nhiều hơn 1 định nghĩa, không cần can thiệp
+    if (!hasMetaDef && !isPoorDefs) {
+        return currentResult;
+    }
+
+    for (const item of lemmas) {
+        if (item.lemma.toLowerCase() === lowerWord) continue;
+
+        const baseResult = lookupDirectFromDb(item.lemma, 'en');
+        if (!baseResult.exists || baseResult.results.length === 0) continue;
+
+        const baseEnglish = baseResult.results.find(res => res.lang_code === 'en');
+        if (!baseEnglish || baseEnglish.meanings.length === 0) continue;
+
+        // Nếu từ hiện tại có định nghĩa meta hoặc có quá ít nghĩa so với từ gốc
+        if (hasMetaDef || (isPoorDefs && baseEnglish.meanings.length > currentResult.meanings.length)) {
+            // Lọc bỏ các định nghĩa chỉ là meta sentence
+            const nonMetaCurrentMeanings = currentResult.meanings.filter(m => !isMetaGrammarDefinition(m.definition));
+
+            // Tránh trùng lặp định nghĩa
+            const seenDefs = new Set<string>();
+            nonMetaCurrentMeanings.forEach(m => seenDefs.add(m.definition.trim().toLowerCase()));
+
+            const addedBaseMeanings: DictionaryMeaning[] = [];
+            for (const bm of baseEnglish.meanings) {
+                const norm = bm.definition.trim().toLowerCase();
+                const isDuplicate = Array.from(seenDefs).some(existing => 
+                    existing === norm || 
+                    (existing.length > 5 && norm.length > 5 && (existing.includes(norm) || norm.includes(existing)))
+                );
+                if (!isDuplicate) {
+                    seenDefs.add(norm);
+                    addedBaseMeanings.push(bm);
+                }
+            }
+
+            const noteMeaning: DictionaryMeaning = {
+                definition: `${item.explanation} Hiển thị nghĩa của từ gốc "${item.lemma}":`,
+                definition_lang: 'vi',
+                example: null,
+                pos: 'Dạng biến thể',
+                sub_pos: item.posType === 'noun' ? 'Số nhiều' : item.posType === 'verb' ? 'Chia thì' : 'So sánh',
+                source: 'Lemmatizer NLP',
+                links: [item.lemma]
+            };
+
+            // Kế thừa phiên âm nếu từ hiện tại chưa có
+            const pronunciations = currentResult.pronunciations.length > 0 
+                ? currentResult.pronunciations 
+                : baseEnglish.pronunciations;
+
+            // Bổ sung quan hệ gốc từ
+            const relations = [...currentResult.relations];
+            if (!relations.some(rel => rel.related_word.toLowerCase() === item.lemma.toLowerCase())) {
+                relations.unshift({
+                    related_word: item.lemma,
+                    relation_type: 'Gốc từ'
+                });
+            }
+
+            return {
+                ...currentResult,
+                meanings: [noteMeaning, ...nonMetaCurrentMeanings, ...addedBaseMeanings],
+                pronunciations,
+                relations
+            };
+        }
+    }
+
+    return currentResult;
+}
+
+/**
  * Tra cứu đồng bộ nội bộ (SQLite DB, Custom Words, Địa danh, Tên riêng, Số, Thời gian, Lemmatizer)
  */
 export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
@@ -429,6 +523,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                         return {
                             ...r,
                             audio: `/api/v1/tts?word=${encodeURIComponent(customEntry.word)}&lang=${r.lang_code}`,
+                            pronunciations: (customEntry.pronunciations && customEntry.pronunciations.length > 0) ? customEntry.pronunciations : r.pronunciations,
                             meanings: [noteMeaning, ...r.meanings],
                             relations: [
                                 { related_word: targetAlias, relation_type: 'Gốc từ' },
@@ -491,7 +586,16 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     // 2. Tra cứu trực tiếp từ SQLite Database
     const dbResult = lookupDirectFromDb(cleanWord, lang);
     if (dbResult.exists) {
-        return dbResult;
+        const enrichedResults = dbResult.results.map(r => {
+            if (r.lang_code === 'en' || !lang) {
+                return enrichEnglishResultWithLemmas(cleanWord, r);
+            }
+            return r;
+        });
+        return {
+            ...dbResult,
+            results: enrichedResults
+        };
     }
 
     // 2.1. Tra cứu Số (Numbers Engine: 0, 1, 100, 2024, 3.14, 1st, 2nd, IV, X...)
