@@ -6,6 +6,7 @@
 
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 
 // POS labels
 const POS_LABELS: Record<string, string> = {
@@ -148,19 +149,42 @@ let db: Database.Database | null = null;
 
 function getDb(): Database.Database {
     if (!db) {
-        const dbPath = path.join(process.cwd(), 'lib', 'dictionary.db');
-        db = new Database(dbPath, {
-            readonly: true,
-            fileMustExist: true
-        });
+        const possiblePaths = [
+            path.join(process.cwd(), 'lib', 'dictionary.db'),
+            path.join(process.cwd(), '.next', 'standalone', 'lib', 'dictionary.db'),
+            path.join(__dirname, '..', 'lib', 'dictionary.db'),
+            path.join(__dirname, 'dictionary.db'),
+            '/app/lib/dictionary.db'
+        ];
+        let dbPath = possiblePaths[0];
+        for (const p of possiblePaths) {
+            try {
+                if (fs.existsSync(p)) {
+                    dbPath = p;
+                    break;
+                }
+            } catch {
+                // ignore
+            }
+        }
 
-        db.pragma('query_only = ON');
-        db.pragma('journal_mode = OFF');
-        db.pragma('synchronous = OFF');
-        db.pragma('cache_size = -32000');
-        db.pragma('mmap_size = 256000000');
-        db.pragma('temp_store = MEMORY');
-        db.pragma('threads = 4');
+        try {
+            db = new Database(dbPath, {
+                readonly: true,
+                fileMustExist: true
+            });
+
+            db.pragma('query_only = ON');
+            db.pragma('journal_mode = OFF');
+            db.pragma('synchronous = OFF');
+            db.pragma('cache_size = -32000');
+            db.pragma('mmap_size = 256000000');
+            db.pragma('temp_store = MEMORY');
+            db.pragma('threads = 4');
+        } catch (err) {
+            console.error(`[DB ERROR] Failed to initialize SQLite database at ${dbPath}:`, err);
+            throw err;
+        }
     }
     return db;
 }

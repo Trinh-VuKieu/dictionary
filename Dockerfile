@@ -24,7 +24,7 @@ RUN npm run build
 
 # Stage 3: Minimal production runner
 FROM node:20-alpine AS runner
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat libstdc++
 WORKDIR /app
 
 ENV NODE_ENV=production
