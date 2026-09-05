@@ -1,4 +1,4 @@
-import { MultiLookupResult, LanguageResult } from './dictionary';
+import { LanguageResult } from './dictionary';
 
 export interface CustomWordEntry {
     word: string;

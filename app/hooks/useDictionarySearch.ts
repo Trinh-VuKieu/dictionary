@@ -31,7 +31,8 @@ export function useDictionarySearch(options: UseDictionarySearchOptions = {}) {
     const suggestCacheRef = useRef<{
         query: string;        // Original query that was fetched
         suggestions: string[]; // Response suggestions
-    }>({ query: '', suggestions: [] });
+        lang: string;         // Language code
+    }>({ query: '', suggestions: [], lang: '' });
 
     // Keep refs in sync
     useEffect(() => {
@@ -70,11 +71,12 @@ export function useDictionarySearch(options: UseDictionarySearchOptions = {}) {
             return;
         }
 
+        const wordLang = filterLangRef.current ? filterLangRef.current.split('-')[0] : '';
         const cached = suggestCacheRef.current;
 
-        // Check if we can use cached suggestions (prefix-based filtering)
+        // Check if we can use cached suggestions (prefix-based filtering and same lang)
         // Works for both typing forward and backspace
-        if (cached.suggestions.length > 0) {
+        if (cached.suggestions.length > 0 && cached.lang === wordLang) {
             const isContinuation = lowerQuery.startsWith(cached.query);
             const isBackspace = cached.query.startsWith(lowerQuery);
 
@@ -108,14 +110,19 @@ export function useDictionarySearch(options: UseDictionarySearchOptions = {}) {
             try {
                 // Use query (not trimmed) to support compound word suggestions
                 // e.g., "họ " should suggest "họ tộc", "họ mạc" instead of "họ", "hoạ"
-                const res = await fetch(`/api/v1/suggest?q=${encodeURIComponent(query)}`);
+                let suggestUrl = `/api/v1/suggest?q=${encodeURIComponent(query)}`;
+                if (wordLang) {
+                    suggestUrl += `&lang=${encodeURIComponent(wordLang)}`;
+                }
+                const res = await fetch(suggestUrl);
                 const data = await res.json();
                 // Double-check we still need suggestions (result might have loaded)
                 if (queryRef.current === currentQuery && data.suggestions?.length > 0) {
                     // Cache the new results
                     suggestCacheRef.current = {
                         query: lowerQuery,
-                        suggestions: data.suggestions
+                        suggestions: data.suggestions,
+                        lang: wordLang
                     };
                     setSuggestions(data.suggestions);
                     setShowSuggestions(true);
@@ -132,7 +139,7 @@ export function useDictionarySearch(options: UseDictionarySearchOptions = {}) {
         }, 30);
 
         return () => clearTimeout(timer);
-    }, [query, result]);
+    }, [query, result, filterLang]);
 
     const searchWord = useCallback(async (word: string, lang?: string) => {
         if (!word.trim()) {

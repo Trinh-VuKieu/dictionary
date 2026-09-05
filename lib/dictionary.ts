@@ -748,6 +748,19 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
         }
     }
 
+    // 7. Làm sạch dấu câu dư thừa ở đầu và cuối chuỗi (Punctuation Trimming Fallback)
+    // Ví dụ: "hello.", "word?", "apple,", "“vietnam”", "(example)"
+    const stripped = cleanWord.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+    if (stripped && stripped !== cleanWord && stripped.length >= 1) {
+        const retryResult = lookupWordSync(stripped, lang);
+        if (retryResult.exists) {
+            return {
+                ...retryResult,
+                word: cleanWord
+            };
+        }
+    }
+
     return { exists: false, word: normalizeVietnamese(cleanWord.normalize('NFC').toLowerCase()), results: [] };
 }
 
@@ -801,11 +814,29 @@ let suggestStmt: Database.Statement | null = null;
  */
 export function getSuggestions(prefix: string, limit: number = 8, lang?: string): string[] {
     const cleanPrefix = prefix.trim().toLowerCase().replace(/[’‘`]/g, "'");
-    const customList = getCustomSuggestions(cleanPrefix, limit);
-    const contractionSuggestions = Object.keys(CONTRACTIONS)
-        .filter(k => k.startsWith(cleanPrefix))
-        .slice(0, limit);
-    const placesSuggestions = getPlacesSuggestions(cleanPrefix, limit);
+    if (!cleanPrefix) return [];
+
+    let customList = getCustomSuggestions(cleanPrefix, limit);
+    if (lang) {
+        customList = customList.filter(word => {
+            const entry = getCustomWord(word);
+            if (!entry) return true;
+            if (entry.results && entry.results.length > 0) {
+                return entry.results.some(r => r.lang_code === lang);
+            }
+            return lang === 'en';
+        });
+    }
+
+    const contractionSuggestions = (!lang || lang === 'en')
+        ? Object.keys(CONTRACTIONS)
+            .filter(k => k.startsWith(cleanPrefix))
+            .slice(0, limit)
+        : [];
+
+    const placesSuggestions = (!lang || lang === 'vi' || lang === 'en')
+        ? getPlacesSuggestions(cleanPrefix, limit)
+        : [];
 
     const database = getDb();
     const normalizedPrefix = normalizeVietnamese(prefix.normalize('NFC').toLowerCase());

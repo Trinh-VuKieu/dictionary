@@ -31,12 +31,22 @@ export async function lookupWiktionaryFallback(query: string, preferredLang?: st
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-        // 1. Lấy định nghĩa chi tiết từ Wiktionary REST API
-        const wiktionaryUrl = `https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(clean.toLowerCase())}`;
-        const wiktionaryPromise = fetch(wiktionaryUrl, {
-            headers: { 'User-Agent': 'DictionaryApp/1.0 (https://dictionary-nine-sage.vercel.app)' },
-            signal: controller.signal
-        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        // 1. Lấy định nghĩa chi tiết từ Wiktionary REST API (thử chữ thường, nếu không có thử chữ gốc)
+        const fetchWiktionary = async (term: string) => {
+            const url = `https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(term)}`;
+            return fetch(url, {
+                headers: { 'User-Agent': 'DictionaryApp/1.0 (https://dictionary-nine-sage.vercel.app)' },
+                signal: controller.signal
+            }).then(r => r.ok ? r.json() : null).catch(() => null);
+        };
+
+        const wiktionaryPromise = fetchWiktionary(clean.toLowerCase()).then(async (data) => {
+            if (data && Array.isArray(data.en) && data.en.length > 0) return data;
+            if (clean !== clean.toLowerCase()) {
+                return fetchWiktionary(clean);
+            }
+            return data;
+        });
 
         // 2. Lấy bản dịch tiếng Việt song song từ Google Translate
         const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&dt=bd&q=${encodeURIComponent(clean)}`;

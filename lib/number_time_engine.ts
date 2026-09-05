@@ -266,7 +266,7 @@ export function parseTimeEntry(input: string): LanguageResult[] | null {
     const timeMatch = raw.match(/^(\d{1,2})[:h](\d{2})?\s*(am|pm)?$/) || raw.match(/^(\d{1,2})\s*(am|pm)$/);
     if (!timeMatch) return null;
 
-    let hour = parseInt(timeMatch[1], 10);
+    const hour = parseInt(timeMatch[1], 10);
     const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
     const meridiem = (timeMatch[3] || '').toLowerCase();
 
@@ -299,7 +299,6 @@ export function parseTimeEntry(input: string): LanguageResult[] | null {
 
     // Vietnamese time phrase
     let viSpoken = '';
-    const hourVi = DIGITS_VI[hour] || String(hour);
     if (minute === 0) {
         viSpoken = `${hour} giờ đúng`;
     } else if (minute === 30) {

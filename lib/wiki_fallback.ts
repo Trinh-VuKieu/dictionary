@@ -55,6 +55,8 @@ export async function lookupWikiFallback(query: string, preferredLang?: string):
     const candidates = [clean];
     const titleCased = toTitleCase(clean);
     if (titleCased !== clean) candidates.push(titleCased);
+    const upperCased = clean.toUpperCase();
+    if (!candidates.includes(upperCased)) candidates.push(upperCased);
 
     // Thứ tự ngôn ngữ thử nghiệm: nếu chỉ định lang thì ưu tiên lang đó trước
     const langs = preferredLang
@@ -126,7 +128,7 @@ export async function lookupWikiFallback(query: string, preferredLang?: string):
                         return lookupResult;
                     }
                 }
-            } catch (err) {
+            } catch {
                 // Bỏ qua lỗi mạng/timeout và tiếp tục thử ứng viên tiếp theo
             }
         }

@@ -15,10 +15,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q');
     const limitParam = searchParams.get('limit');
+    const langParam = searchParams.get('lang') || undefined;
 
     // Build log message - only include params that exist
     const logParts = [`[SUGGEST] ${q}`];
     if (limitParam) logParts.push(`limit:${limitParam}`);
+    if (langParam) logParts.push(`lang:${langParam}`);
     console.log(logParts.join(' '));
 
     if (!q || q.length < 1) {
@@ -34,6 +36,6 @@ export async function GET(req: Request) {
         }
     }
 
-    const suggestions = getSuggestions(q, limit);
+    const suggestions = getSuggestions(q, limit, langParam);
     return NextResponse.json({ suggestions }, { headers: CACHE_HEADERS });
 }

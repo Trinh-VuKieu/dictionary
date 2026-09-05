@@ -8,6 +8,10 @@ const CORS_HEADERS = {
     'Accept-Ranges': 'bytes',
 };
 
+// In-memory audio buffer cache (stores up to 500 audio files in memory)
+const AUDIO_CACHE = new Map<string, ArrayBuffer>();
+const MAX_AUDIO_CACHE_SIZE = 500;
+
 export async function OPTIONS() {
     return new NextResponse(null, {
         status: 204,
@@ -53,6 +57,18 @@ export async function GET(req: Request) {
         );
     }
 
+    const cacheKey = `${word.toLowerCase().trim()}:${lang}`;
+    if (AUDIO_CACHE.has(cacheKey)) {
+        const cachedBuffer = AUDIO_CACHE.get(cacheKey)!;
+        return new NextResponse(cachedBuffer, {
+            headers: {
+                'Content-Type': 'audio/mpeg',
+                'Cache-Control': 'public, max-age=31536000, immutable',
+                ...CORS_HEADERS,
+            },
+        });
+    }
+
     // Try languages in order: specified lang -> English -> Vietnamese
     const langsToTry = [lang];
     if (lang !== 'en') langsToTry.push('en');
@@ -70,6 +86,13 @@ export async function GET(req: Request) {
 
             if (response.ok) {
                 const audioBuffer = await response.arrayBuffer();
+
+                if (AUDIO_CACHE.size >= MAX_AUDIO_CACHE_SIZE) {
+                    const oldestKey = AUDIO_CACHE.keys().next().value;
+                    if (oldestKey) AUDIO_CACHE.delete(oldestKey);
+                }
+                AUDIO_CACHE.set(cacheKey, audioBuffer);
+
                 console.log(`[TTS] "${word}" lang=${tryLang}${tryLang !== lang ? ` (fallback from ${lang})` : ''}`);
                 return new NextResponse(audioBuffer, {
                     headers: {

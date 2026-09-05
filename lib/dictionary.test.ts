@@ -16,6 +16,12 @@ describe('Dictionary Module', () => {
             expect(result.exists).toBe(true)
         })
 
+        it('should perform synchronous lookup via lookupWordSync', () => {
+            const result = lookupWordSync('xin chào')
+            expect(result.exists).toBe(true)
+            expect(result.word).toBe('xin chào')
+        })
+
         it('should return meanings with required fields', async () => {
             const result = await lookupWord('từ điển')
             expect(result.exists).toBe(true)
@@ -164,6 +170,20 @@ describe('Dictionary Module', () => {
             const resReally = await lookupWord("really")
             expect(resReally.exists).toBe(true)
             expect(resReally.results.length).toBeGreaterThan(0)
+        })
+
+        it('should strip trailing and surrounding punctuation when looking up words', async () => {
+            const resDot = await lookupWord("quite.")
+            expect(resDot.exists).toBe(true)
+
+            const resExclamation = await lookupWord("hello!")
+            expect(resExclamation.exists).toBe(true)
+
+            const resQuestion = await lookupWord("word?")
+            expect(resQuestion.exists).toBe(true)
+
+            const resQuotes = await lookupWord('"apple"')
+            expect(resQuotes.exists).toBe(true)
         })
     })
 
@@ -423,6 +443,16 @@ describe('Dictionary Module', () => {
             const mountainSuggestions = getSuggestions("eve", 5)
             expect(mountainSuggestions).toContain("Everest")
         })
+
+        it('should filter out English contractions when lang is vi', () => {
+            const viSuggestions = getSuggestions("he'", 5, 'vi')
+            expect(viSuggestions).not.toContain("he's")
+        })
+
+        it('should include English contractions when lang is en', () => {
+            const enSuggestions = getSuggestions("he'", 5, 'en')
+            expect(enSuggestions).toContain("he's")
+        })
     })
 
     describe('DictionaryMeaning structure', () => {
@@ -493,6 +523,19 @@ describe('Dictionary Module', () => {
             const res = await GET(req);
             expect(res.status).toBe(200);
             expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+        });
+
+        it('should serve repeated audio requests from in-memory cache', async () => {
+            const { GET } = await import('../app/api/v1/tts/route');
+            const req1 = new Request('http://localhost:3000/api/v1/tts?word=quite&lang=en');
+            const res1 = await GET(req1);
+            expect(res1.status).toBe(200);
+
+            // Second call should serve from AUDIO_CACHE
+            const req2 = new Request('http://localhost:3000/api/v1/tts?word=quite&lang=en');
+            const res2 = await GET(req2);
+            expect(res2.status).toBe(200);
+            expect(res2.headers.get('Content-Type')).toBe('audio/mpeg');
         });
 
         it('should resolve rare medical / technical English words via Wiktionary fallback', async () => {

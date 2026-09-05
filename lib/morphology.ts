@@ -1,4 +1,4 @@
-// @ts-ignore
+// @ts-expect-error wink-lemmatizer lacks full type definitions
 import lemmatize from 'wink-lemmatizer';
 
 export interface ContractionInfo {
