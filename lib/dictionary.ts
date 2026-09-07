@@ -495,7 +495,7 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
  * Tra cứu đồng bộ nội bộ (SQLite DB, Custom Words, Địa danh, Tên riêng, Số, Thời gian, Lemmatizer)
  */
 export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
-    const cleanWord = word.trim().replace(/[’‘`]/g, "'");
+    const cleanWord = word.trim().replace(/[’‘`]/g, "'").replace(/-{2,}/g, '-');
 
     // 1. Kiểm tra trong Custom Words trước
     const customEntry = getCustomWord(cleanWord);

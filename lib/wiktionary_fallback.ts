@@ -96,7 +96,7 @@ async function translateToVietnamese(text: string, signal?: AbortSignal): Promis
  * tiếng lóng mới, hoặc các dạng biến thể ngữ pháp hiếm.
  */
 export async function lookupWiktionaryFallback(query: string, preferredLang?: string): Promise<MultiLookupResult | null> {
-    const clean = query.trim();
+    const clean = query.trim().replace(/[’‘`]/g, "'").replace(/-{2,}/g, '-');
     if (!clean || clean.length < 2) return null;
 
     // Bỏ qua chuỗi hash vô nghĩa (vừa số vừa chữ ngẫu nhiên dài)
@@ -168,17 +168,31 @@ export async function lookupWiktionaryFallback(query: string, preferredLang?: st
         }
 
         // Thêm nghĩa tiếng Việt nếu có
-        if (viTranslation && viTranslation.toLowerCase() !== clean.toLowerCase()) {
-            const subLinks: string[] = [];
-            if (clean.includes('-')) {
-                subLinks.push(...clean.split('-').filter(part => part.length > 2));
-            }
+        const subLinks: string[] = [];
+        if (clean.includes('-')) {
+            subLinks.push(...clean.split('-').filter(part => part.length > 2));
+        }
 
+        if (viTranslation && viTranslation.toLowerCase() !== clean.toLowerCase()) {
             meanings.unshift({
                 pos: meanings.length > 0 ? meanings[0].pos : 'Từ vựng',
                 sub_pos: clean.includes('-') ? 'Từ ghép (Compound)' : null,
                 definition: viTranslation,
                 definition_lang: 'vi',
+                example: null,
+                source: 'Từ điển dịch',
+                links: subLinks
+            });
+        }
+
+        // Đảm bảo luôn có ít nhất một định nghĩa tiếng Anh để hỗ trợ tham số def_lang=en
+        if (meanings.length > 0 && !meanings.some(m => m.definition_lang === 'en')) {
+            const spaceForm = clean.replace(/-/g, ' ');
+            meanings.push({
+                pos: meanings[0].pos || 'Từ vựng',
+                sub_pos: clean.includes('-') ? 'Compound term' : null,
+                definition: `Compound or descriptive phrase equivalent to "${spaceForm}".`,
+                definition_lang: 'en',
                 example: null,
                 source: 'Từ điển dịch',
                 links: subLinks
