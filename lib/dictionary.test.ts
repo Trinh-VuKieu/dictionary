@@ -819,6 +819,71 @@ describe('Dictionary Module', () => {
             expect(citSugs).toContain('city');
             expect(citSugs).not.toContain('citi');
         });
+
+        it('should correctly handle words with "qui" without corrupting into "quy" (quick, quiet, quite, liquid, require...)', async () => {
+            const { lookupWord, getSuggestions } = await import('./dictionary');
+
+            // 1. English words with "qui" should never be mutated into "quy"
+            const resQuick = await lookupWord('quick');
+            expect(resQuick.exists).toBe(true);
+            expect(resQuick.word).toBe('quick');
+            expect(resQuick.word).not.toBe('quyck');
+            expect(resQuick.results[0].audio).toContain('word=quick');
+            expect(resQuick.results[0].meanings.length).toBeGreaterThan(0);
+
+            const resQuiet = await lookupWord('quiet');
+            expect(resQuiet.exists).toBe(true);
+            expect(resQuiet.word).toBe('quiet');
+            expect(resQuiet.word).not.toBe('quyet');
+
+            const resQuite = await lookupWord('quite');
+            expect(resQuite.exists).toBe(true);
+            expect(resQuite.word).toBe('quite');
+            expect(resQuite.word).not.toBe('quyte');
+
+            const resLiquid = await lookupWord('liquid');
+            expect(resLiquid.exists).toBe(true);
+            expect(resLiquid.word).toBe('liquid');
+            expect(resLiquid.word).not.toBe('liquyd');
+
+            const resRequire = await lookupWord('require');
+            expect(resRequire.exists).toBe(true);
+            expect(resRequire.word).toBe('require');
+            expect(resRequire.word).not.toBe('requyre');
+
+            const resEquipment = await lookupWord('equipment');
+            expect(resEquipment.exists).toBe(true);
+            expect(resEquipment.word).toBe('equipment');
+            expect(resEquipment.word).not.toBe('equypment');
+
+            const resAcquire = await lookupWord('acquire');
+            expect(resAcquire.exists).toBe(true);
+            expect(resAcquire.word).toBe('acquire');
+            expect(resAcquire.word).not.toBe('acquyre');
+
+            const resSquid = await lookupWord('squid');
+            expect(resSquid.exists).toBe(true);
+            expect(resSquid.word).toBe('squid');
+            expect(resSquid.word).not.toBe('squyd');
+
+            // 2. Vietnamese qui vs quy should both resolve cleanly
+            const resQuyTac = await lookupWord('quy tắc');
+            expect(resQuyTac.exists).toBe(true);
+            expect(resQuyTac.word).toBe('quy tắc');
+
+            const resQuiTac = await lookupWord('qui tắc');
+            expect(resQuiTac.exists).toBe(true);
+            expect(resQuiTac.word).toBe('qui tắc');
+
+            // 3. Suggestions for "qui" & "quick" should never contain "quyck"
+            const quickSugs = getSuggestions('quick');
+            expect(quickSugs).toContain('quick');
+            expect(quickSugs).not.toContain('quyck');
+
+            const quiSugs = getSuggestions('qui');
+            expect(quiSugs).toContain('quite');
+            expect(quiSugs).not.toContain('quyte');
+        });
     })
 })
 

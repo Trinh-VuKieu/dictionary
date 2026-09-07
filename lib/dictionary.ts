@@ -260,17 +260,49 @@ function getStatements() {
 }
 
 /**
- * Phục hồi các từ tiếng Anh kết thúc bằng li, ti, mi, si, ki, hi bị lưu thành i trong database gốc
- * Ví dụ: usualli -> usually, famili -> family, citi -> city, parti -> party, onli -> only
+ * Chuyển từ tiếng Anh chuẩn sang dạng bị lưu sai trong database gốc (SQLite):
+ * 1. qui -> quy (quick -> quyck, quiet -> quyet, liquid -> liquyd, require -> requyre)
+ * 2. [hklmst]y ở cuối từ -> [hklmst]i (usually -> usualli, family -> famili, city -> citi, party -> parti)
+ */
+function toDbEnglishVariant(str: string): string {
+    return str.toLowerCase().split(' ').map(w => {
+        let res = w;
+        if (res.includes('qui')) {
+            res = res.replace(/qui/g, 'quy');
+        }
+        if (/(?:[hklmst])y$/i.test(res)) {
+            res = res.slice(0, -1) + 'i';
+        }
+        return res;
+    }).join(' ');
+}
+
+function isEnglishDbVariant(dbWord: string, originalWord: string): boolean {
+    if (!dbWord || !originalWord) return false;
+    const dbLower = dbWord.toLowerCase();
+    const origLower = originalWord.toLowerCase();
+    if (dbLower === origLower) return true;
+    return toDbEnglishVariant(origLower) === dbLower;
+}
+
+/**
+ * Phục hồi các từ tiếng Anh bị lưu sai trong database gốc:
+ * 1. quy -> qui (quyck -> quick, quyet -> quiet, requyre -> require, liquyd -> liquid, squyd -> squid)
+ * 2. [hklmst]i ở cuối từ -> [hklmst]y (usualli -> usually, famili -> family, citi -> city, parti -> party, onli -> only)
  */
 function demangleEnglishWord(w: string): string {
     if (!w) return '';
+    let res = w;
+    // Phục hồi qui từ quy trong tiếng Anh
+    res = res.replace(/quy/g, 'qui');
+
+    // Phục hồi đuôi -y từ -i
     const legitI = new Set([
         'chili', 'chilli', 'broccoli', 'graffiti', 'macaroni', 'spaghetti', 'swahili',
         'salami', 'tsunami', 'origami', 'yogi', 'corgi', 'alkali', 'alibi', 'bikini',
         'zucchini', 'cacti', 'fungi', 'radii', 'termini', 'octopi', 'alumni', 'hippopotami', 'syllabus'
     ]);
-    return w.split(' ').map(part => {
+    return res.split(' ').map(part => {
         if (/(?:[hklmst])i$/i.test(part) && !legitI.has(part.toLowerCase())) {
             return part.slice(0, -1) + 'y';
         }
@@ -292,10 +324,14 @@ function normalizeVietnamese(text: string): string {
         .replace(/(?<=^|\s)([hklmst])ỹ(?=\s|$|[.,!?])/g, '$1ĩ')
         .replace(/(?<=^|\s)([hklmst])ỵ(?=\s|$|[.,!?])/g, '$1ị');
 
-    if (result.includes('qui')) {
-        result = result.replace(/qui/g, 'quy').replace(/quì/g, 'quỳ').replace(/quí/g, 'quý')
-            .replace(/quỉ/g, 'quỷ').replace(/quĩ/g, 'quỹ').replace(/quị/g, 'quỵ');
-    }
+    // Chỉ chuẩn hóa qui -> quy cho âm tiết đơn lập tiếng Việt (đầu chuỗi hoặc sau dấu cách)
+    // Tuyệt đối không can thiệp vào các từ tiếng Anh có chứa qui (như quick, quiet, quite, liquid, require, acquire...)
+    result = result.replace(/(?<=^|\s)qui(?=\s|$|[.,!?])/g, 'quy')
+        .replace(/(?<=^|\s)quì(?=\s|$|[.,!?])/g, 'quỳ')
+        .replace(/(?<=^|\s)quí(?=\s|$|[.,!?])/g, 'quý')
+        .replace(/(?<=^|\s)quỉ(?=\s|$|[.,!?])/g, 'quỷ')
+        .replace(/(?<=^|\s)quĩ(?=\s|$|[.,!?])/g, 'quỹ')
+        .replace(/(?<=^|\s)quị(?=\s|$|[.,!?])/g, 'quỵ');
 
     if (/[ùúủũụòóỏõọ]/.test(result)) {
         result = result.replace(/ùy/g, 'uỳ').replace(/úy/g, 'uý').replace(/ủy/g, 'uỷ').replace(/ũy/g, 'uỹ').replace(/ụy/g, 'uỵ')
@@ -400,10 +436,10 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
         }
     }
 
-    // Nếu chưa tìm thấy và từ có thể là tiếng Anh kết thúc bằng [hklmst]y bị lưu thành i trong database gốc
-    // (Ví dụ: usually -> usualli, family -> famili, city -> citi, party -> parti, daily -> daili, only -> onli)
+    // Nếu chưa tìm thấy và từ có thể là tiếng Anh có dạng bị lưu sai trong database gốc
+    // (Ví dụ: quick -> quyck, liquid -> liquyd, usually -> usualli, family -> famili, city -> citi)
     if (wordRows.length === 0 && (!lang || lang === 'en')) {
-        const dbVariant = normalized.split(' ').map(w => /(?:[hklmst])y$/i.test(w) ? w.slice(0, -1) + 'i' : w).join(' ');
+        const dbVariant = toDbEnglishVariant(normalized);
         if (dbVariant !== normalized) {
             if (lang) {
                 const row = lookupByLangStmt!.get(dbVariant, lang) as { id: number; word: string; lang_code: string } | undefined;
@@ -418,13 +454,19 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
         return { exists: false, word: word, results: [] };
     }
 
-    const isDbVariant = /(?:[hklmst])i$/i.test(wordRows[0].word) && /(?:[hklmst])y$/i.test(word);
-    const resolvedWord = (word.toLowerCase() === wordRows[0].word.toLowerCase() || isDbVariant)
+    const isDbVariant = isEnglishDbVariant(wordRows[0].word, word);
+    let resolvedWord = (word.toLowerCase() === wordRows[0].word.toLowerCase() || isDbVariant)
         ? word
         : wordRows[0].word;
+    if (wordRows[0].lang_code === 'en') {
+        resolvedWord = demangleEnglishWord(resolvedWord);
+    }
 
     const rawResults: LanguageResult[] = wordRows.map(row => {
-        const itemWord = (word.toLowerCase() === row.word.toLowerCase() || isDbVariant) ? word : row.word;
+        let itemWord = (word.toLowerCase() === row.word.toLowerCase() || isDbVariant) ? word : row.word;
+        if (row.lang_code === 'en') {
+            itemWord = demangleEnglishWord(itemWord);
+        }
         return getWordData(row.id, itemWord, row.lang_code);
     });
 
@@ -1083,9 +1125,7 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
 
     const database = getDb();
     const normalizedPrefix = normalizeVietnamese(prefix.normalize('NFC').toLowerCase());
-    const dbPrefixVariant = /(?:[hklmst])y$/i.test(normalizedPrefix)
-        ? normalizedPrefix.slice(0, -1) + 'i'
-        : normalizedPrefix;
+    const dbPrefixVariant = toDbEnglishVariant(normalizedPrefix);
     let dbRows: string[] = [];
 
     if (lang) {
