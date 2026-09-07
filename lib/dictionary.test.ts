@@ -763,5 +763,62 @@ describe('Dictionary Module', () => {
                 expect(allDefs.some(d => d.trim() === '.')).toBe(false);
             }
         });
+
+        it('should correctly handle ussually typo and prevent -ly/-ty words from turning into -li/-ti', async () => {
+            const { lookupWord, getSuggestions } = await import('./dictionary');
+
+            // 1. ussually typo should map to usually, never returning ussualli
+            const resUssually = await lookupWord('ussually');
+            expect(resUssually.exists).toBe(true);
+            expect(resUssually.word).toBe('ussually');
+            expect(resUssually.word).not.toBe('ussualli');
+            expect(resUssually.results.length).toBeGreaterThan(0);
+            expect(resUssually.results[0].meanings[0].definition).toContain('usually');
+
+            // 2. usually should return pristine "usually", never "usualli"
+            const resUsually = await lookupWord('usually');
+            expect(resUsually.exists).toBe(true);
+            expect(resUsually.word).toBe('usually');
+            expect(resUsually.word).not.toBe('usualli');
+            expect(resUsually.results[0].audio).toContain('word=usually');
+
+            // 3. other English words ending in -ly, -ty must not be corrupted to -li, -ti
+            const resFamily = await lookupWord('family');
+            expect(resFamily.exists).toBe(true);
+            expect(resFamily.word).toBe('family');
+            expect(resFamily.word).not.toBe('famili');
+
+            const resCity = await lookupWord('city');
+            expect(resCity.exists).toBe(true);
+            expect(resCity.word).toBe('city');
+            expect(resCity.word).not.toBe('citi');
+
+            const resParty = await lookupWord('party');
+            expect(resParty.exists).toBe(true);
+            expect(resParty.word).toBe('party');
+            expect(resParty.word).not.toBe('parti');
+
+            const resOnly = await lookupWord('only');
+            expect(resOnly.exists).toBe(true);
+            expect(resOnly.word).toBe('only');
+            expect(resOnly.word).not.toBe('onli');
+
+            // 4. Suggestions must never return corrupted -li/-ti words
+            const usuaSugs = getSuggestions('usua');
+            expect(usuaSugs).toContain('usually');
+            expect(usuaSugs).not.toContain('usualli');
+
+            const ussuaSugs = getSuggestions('ussua');
+            expect(ussuaSugs).toContain('ussually');
+
+            const famiSugs = getSuggestions('fami');
+            expect(famiSugs).toContain('family');
+            expect(famiSugs).not.toContain('famili');
+
+            const citSugs = getSuggestions('cit');
+            expect(citSugs).toContain('city');
+            expect(citSugs).not.toContain('citi');
+        });
     })
 })
+

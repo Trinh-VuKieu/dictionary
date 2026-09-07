@@ -16,6 +16,58 @@ export interface CustomWordEntry {
  * Cách 2: Trỏ về từ gốc (aliasTo) kèm ghi chú ngữ pháp (như "classes" -> trỏ về "class")
  */
 export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
+    // 0.1. Từ "usually" và các lỗi chính tả phổ biến (ussually, usualy)
+    "usually": {
+        word: "usually",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=usually&lang=en",
+                meanings: [
+                    {
+                        definition: "Thường thường, thường lệ, thông thường.",
+                        definition_lang: "vi",
+                        example: "I usually wake up early. / He usually takes the bus to work.",
+                        pos: "Phó từ",
+                        sub_pos: "Trạng từ chỉ tần suất (Frequency Adverb)",
+                        source: "Custom",
+                        links: ["usual"]
+                    },
+                    {
+                        definition: "Under normal conditions; generally; as a rule.",
+                        definition_lang: "en",
+                        example: "We usually have dinner at seven. / What time do you usually finish?",
+                        pos: "Adverb",
+                        sub_pos: "Adverb of frequency",
+                        source: "Custom",
+                        links: ["usual"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/ˈjuː.ʒu.ə.li/", region: "US" },
+                    { ipa: "/ˈjuː.ʒu.li/", region: "UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "thường thường, thông thường" }
+                ],
+                relations: [
+                    { related_word: "usual", relation_type: "Gốc từ" }
+                ]
+            }
+        ]
+    },
+    "ussually": {
+        word: "ussually",
+        aliasTo: "usually",
+        note: "Lỗi chính tả thường gặp của từ 'usually' (thường thường, thông thường)."
+    },
+    "usualy": {
+        word: "usualy",
+        aliasTo: "usually",
+        note: "Lỗi chính tả thường gặp của từ 'usually' (thường thường, thông thường)."
+    },
+
     // 0. Từ "my" (bị thiếu trong database gốc)
     "my": {
         word: "my",

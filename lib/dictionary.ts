@@ -259,17 +259,38 @@ function getStatements() {
     };
 }
 
+/**
+ * Phục hồi các từ tiếng Anh kết thúc bằng li, ti, mi, si, ki, hi bị lưu thành i trong database gốc
+ * Ví dụ: usualli -> usually, famili -> family, citi -> city, parti -> party, onli -> only
+ */
+function demangleEnglishWord(w: string): string {
+    if (!w) return '';
+    const legitI = new Set([
+        'chili', 'chilli', 'broccoli', 'graffiti', 'macaroni', 'spaghetti', 'swahili',
+        'salami', 'tsunami', 'origami', 'yogi', 'corgi', 'alkali', 'alibi', 'bikini',
+        'zucchini', 'cacti', 'fungi', 'radii', 'termini', 'octopi', 'alumni', 'hippopotami', 'syllabus'
+    ]);
+    return w.split(' ').map(part => {
+        if (/(?:[hklmst])i$/i.test(part) && !legitI.has(part.toLowerCase())) {
+            return part.slice(0, -1) + 'y';
+        }
+        return part;
+    }).join(' ');
+}
+
 function normalizeVietnamese(text: string): string {
     if (!text) return '';
 
     let result = text;
 
-    result = result.replace(/(?<!u)([hklmst])y(?=\s|$|[.,!?])/g, '$1i')
-        .replace(/(?<!u)([hklmst])ỳ(?=\s|$|[.,!?])/g, '$1ì')
-        .replace(/(?<!u)([hklmst])ý(?=\s|$|[.,!?])/g, '$1í')
-        .replace(/(?<!u)([hklmst])ỷ(?=\s|$|[.,!?])/g, '$1ỉ')
-        .replace(/(?<!u)([hklmst])ỹ(?=\s|$|[.,!?])/g, '$1ĩ')
-        .replace(/(?<!u)([hklmst])ỵ(?=\s|$|[.,!?])/g, '$1ị');
+    // Chỉ chuẩn hóa y -> i cho các từ/âm tiết đơn lập tiếng Việt (đứng đầu chuỗi hoặc sau dấu cách)
+    // Tuyệt đối không can thiệp vào các từ tiếng Anh có đuôi -ly, -ty, -my, -sy... (như usually, ussually, family, city, only...)
+    result = result.replace(/(?<=^|\s)([hklst])y(?=\s|$|[.,!?])/g, '$1i')
+        .replace(/(?<=^|\s)([hklmst])ỳ(?=\s|$|[.,!?])/g, '$1ì')
+        .replace(/(?<=^|\s)([hklmst])ý(?=\s|$|[.,!?])/g, '$1í')
+        .replace(/(?<=^|\s)([hklmst])ỷ(?=\s|$|[.,!?])/g, '$1ỉ')
+        .replace(/(?<=^|\s)([hklmst])ỹ(?=\s|$|[.,!?])/g, '$1ĩ')
+        .replace(/(?<=^|\s)([hklmst])ỵ(?=\s|$|[.,!?])/g, '$1ị');
 
     if (result.includes('qui')) {
         result = result.replace(/qui/g, 'quy').replace(/quì/g, 'quỳ').replace(/quí/g, 'quý')
@@ -311,6 +332,9 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
                 console.error('Error parsing links JSON:', e);
             }
         }
+        if (langCode === 'en' && links.length > 0) {
+            links = links.map(l => demangleEnglishWord(l));
+        }
 
         return {
             definition: meaning.definition,
@@ -334,6 +358,7 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
 
     const updatedRelations = relations.map((rel) => ({
         ...rel,
+        related_word: (langCode === 'en') ? demangleEnglishWord(rel.related_word) : rel.related_word,
         relation_type: RELATION_LABELS[rel.relation_type] ?? rel.relation_type
     }));
 
@@ -356,43 +381,63 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
 
     const normalized = normalizeVietnamese(word.normalize('NFC').toLowerCase());
 
-    let wordRows: { id: number; word: string; lang_code: string }[];
+    let wordRows: { id: number; word: string; lang_code: string }[] = [];
 
     if (lang) {
         // Lookup specific language
         const row = lookupByLangStmt!.get(normalized, lang) as { id: number; word: string; lang_code: string } | undefined;
-        if (!row) {
+        if (!row && word !== normalized) {
             const fallback = lookupByLangStmt!.get(word, lang) as { id: number; word: string; lang_code: string } | undefined;
             wordRows = fallback ? [fallback] : [];
-        } else {
+        } else if (row) {
             wordRows = [row];
         }
     } else {
         // Lookup all languages
         wordRows = lookupAllLangsStmt!.all(normalized) as { id: number; word: string; lang_code: string }[];
-        if (wordRows.length === 0) {
+        if (wordRows.length === 0 && word !== normalized) {
             wordRows = lookupAllLangsStmt!.all(word) as { id: number; word: string; lang_code: string }[];
         }
     }
 
-    if (wordRows.length === 0) {
-        return { exists: false, word: normalized, results: [] };
+    // Nếu chưa tìm thấy và từ có thể là tiếng Anh kết thúc bằng [hklmst]y bị lưu thành i trong database gốc
+    // (Ví dụ: usually -> usualli, family -> famili, city -> citi, party -> parti, daily -> daili, only -> onli)
+    if (wordRows.length === 0 && (!lang || lang === 'en')) {
+        const dbVariant = normalized.split(' ').map(w => /(?:[hklmst])y$/i.test(w) ? w.slice(0, -1) + 'i' : w).join(' ');
+        if (dbVariant !== normalized) {
+            if (lang) {
+                const row = lookupByLangStmt!.get(dbVariant, lang) as { id: number; word: string; lang_code: string } | undefined;
+                if (row) wordRows = [row];
+            } else {
+                wordRows = lookupAllLangsStmt!.all(dbVariant) as { id: number; word: string; lang_code: string }[];
+            }
+        }
     }
 
-    const rawResults: LanguageResult[] = wordRows.map(row =>
-        getWordData(row.id, row.word, row.lang_code)
-    );
+    if (wordRows.length === 0) {
+        return { exists: false, word: word, results: [] };
+    }
+
+    const isDbVariant = /(?:[hklmst])i$/i.test(wordRows[0].word) && /(?:[hklmst])y$/i.test(word);
+    const resolvedWord = (word.toLowerCase() === wordRows[0].word.toLowerCase() || isDbVariant)
+        ? word
+        : wordRows[0].word;
+
+    const rawResults: LanguageResult[] = wordRows.map(row => {
+        const itemWord = (word.toLowerCase() === row.word.toLowerCase() || isDbVariant) ? word : row.word;
+        return getWordData(row.id, itemWord, row.lang_code);
+    });
 
     // Chỉ giữ lại những ngôn ngữ có ít nhất 1 định nghĩa hoặc bản dịch hợp lệ
     const results = rawResults.filter(r => r.meanings.length > 0 || r.translations.length > 0);
 
     if (results.length === 0) {
-        return { exists: false, word: normalized, results: [] };
+        return { exists: false, word: word, results: [] };
     }
 
     return {
         exists: true,
-        word: wordRows[0].word,
+        word: resolvedWord,
         results
     };
 }
@@ -939,7 +984,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
         }
     }
 
-    return { exists: false, word: normalizeVietnamese(cleanWord.normalize('NFC').toLowerCase()), results: [] };
+    return { exists: false, word: cleanWord, results: [] };
 }
 
 /**
@@ -1000,6 +1045,7 @@ export async function lookupWord(word: string, lang?: string): Promise<MultiLook
 
 // Prepared statement for suggestions (lazy loaded)
 let suggestStmt: Database.Statement | null = null;
+let suggestByLangStmt: Database.Statement | null = null;
 
 /**
  * Get word suggestions based on prefix
@@ -1037,30 +1083,35 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
 
     const database = getDb();
     const normalizedPrefix = normalizeVietnamese(prefix.normalize('NFC').toLowerCase());
+    const dbPrefixVariant = /(?:[hklmst])y$/i.test(normalizedPrefix)
+        ? normalizedPrefix.slice(0, -1) + 'i'
+        : normalizedPrefix;
     let dbRows: string[] = [];
 
     if (lang) {
-        const stmt = database.prepare(`
-            SELECT DISTINCT word FROM words 
-            WHERE word LIKE ? || '%' AND lang_code = ?
-            ORDER BY LENGTH(word), word
-            LIMIT ?
-        `);
-        const rows = stmt.all(normalizedPrefix, lang, limit) as { word: string }[];
-        dbRows = rows.map(r => r.word);
+        if (!suggestByLangStmt) {
+            suggestByLangStmt = database.prepare(`
+                SELECT DISTINCT word FROM words 
+                WHERE (word LIKE ? || '%' OR word LIKE ? || '%') AND lang_code = ?
+                ORDER BY LENGTH(word), word
+                LIMIT ?
+            `);
+        }
+        const rows = suggestByLangStmt.all(normalizedPrefix, dbPrefixVariant, lang, limit) as { word: string }[];
+        dbRows = rows.map(r => (lang === 'en' ? demangleEnglishWord(r.word) : r.word));
     } else {
         if (!suggestStmt) {
             suggestStmt = database.prepare(`
                 SELECT DISTINCT word FROM words 
-                WHERE word LIKE ? || '%' 
+                WHERE word LIKE ? || '%' OR word LIKE ? || '%'
                 ORDER BY 
                     CASE lang_code WHEN 'vi' THEN 0 ELSE 1 END,
                     LENGTH(word), word
                 LIMIT ?
             `);
         }
-        const rows = suggestStmt.all(normalizedPrefix, limit) as { word: string }[];
-        dbRows = rows.map(r => r.word);
+        const rows = suggestStmt.all(normalizedPrefix, dbPrefixVariant, limit) as { word: string }[];
+        dbRows = rows.map(r => demangleEnglishWord(r.word));
     }
 
     // Gộp gợi ý từ Custom Words, Contractions, Places và Database, loại bỏ trùng lặp

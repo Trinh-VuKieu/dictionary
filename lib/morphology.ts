@@ -199,6 +199,8 @@ export function getSpellingVariants(word: string): string[] {
 
     // Một số từ biến thể đặc biệt
     const SPECIAL_VARIANTS: Record<string, string> = {
+        'ussually': 'usually',
+        'usualy': 'usually',
         'miniscule': 'minuscule',
         'minuscule': 'miniscule',
         'grey': 'gray',
