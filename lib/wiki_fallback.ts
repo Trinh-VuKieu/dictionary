@@ -83,19 +83,28 @@ export async function lookupWikiFallback(query: string, preferredLang?: string):
                 if (res.ok) {
                     const data = (await res.json()) as WikiSummaryResponse;
 
-                    // Bỏ qua trang định hướng (disambiguation) nếu không có extract hữu ích
-                    if (data.type === 'disambiguation' && (!data.extract || data.extract.includes('có thể là:'))) {
+                    // Bỏ qua tuyệt đối mọi trang định hướng (disambiguation) từ Wikipedia
+                    const isDisambiguation =
+                        data.type === 'disambiguation' ||
+                        data.description?.toLowerCase().includes('topics referred to by the same term') ||
+                        data.description?.toLowerCase().includes('disambiguation') ||
+                        data.extract?.includes('may refer to:') ||
+                        data.extract?.includes('có thể là:') ||
+                        /refer to:\s*$/i.test(data.extract || '');
+
+                    if (isDisambiguation) {
                         continue;
                     }
 
                     if (data.extract && data.extract.length > 10) {
                         const langName = lang === 'vi' ? 'Tiếng Việt' : 'Tiếng Anh';
                         const sourceUrl = data.content_urls?.desktop?.page;
+                        const audioWord = clean === clean.toLowerCase() ? clean : (data.title || clean);
 
                         const languageResult: LanguageResult = {
                             lang_code: lang,
                             lang_name: langName,
-                            audio: `/api/v1/tts?word=${encodeURIComponent(data.title || clean)}&lang=${lang}`,
+                            audio: `/api/v1/tts?word=${encodeURIComponent(audioWord)}&lang=${lang}`,
                             meanings: [
                                 {
                                     definition: data.extract,

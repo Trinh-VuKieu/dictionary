@@ -137,6 +137,857 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
         note: "Dạng số nhiều của đại từ / tính từ chỉ định 'this' (những cái này, những người này)."
     },
 
+    // 0.3. Động từ To Be & Giờ giấc (am, is, are, was, were, been, being, pm, a.m., p.m.)
+    "am": {
+        word: "am",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=am&lang=en",
+                meanings: [
+                    {
+                        definition: "Thì, là, ở, bị, được (dạng chia thì hiện tại đơn của động từ to be, đi với chủ ngữ ngôi thứ nhất số ít 'I').",
+                        definition_lang: "vi",
+                        example: "I am a student. / I am 20 years old. / I am ready.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ to be (Ngôi thứ nhất số ít)",
+                        source: "Custom",
+                        links: ["be", "is", "are"]
+                    },
+                    {
+                        definition: "Giờ buổi sáng (từ 00:00 nửa đêm đến 11:59 trưa). Viết tắt của cụm từ tiếng Latin 'ante meridiem' (trước buổi trưa). Thường viết dưới dạng: am, a.m., AM hoặc A.M.",
+                        definition_lang: "vi",
+                        example: "The train leaves at 7:00 am. / I wake up at 6 am every day.",
+                        pos: "Phó từ / Viết tắt",
+                        sub_pos: "Chỉ thời gian (Time)",
+                        source: "Custom",
+                        links: ["pm", "time", "clock"]
+                    },
+                    {
+                        definition: "Sóng phát thanh AM (viết tắt của Amplitude Modulation - điều chế biên độ tần số vô tuyến, phân biệt với sóng FM).",
+                        definition_lang: "vi",
+                        example: "Listen to the morning news on an AM radio station.",
+                        pos: "Danh từ / Viết tắt",
+                        sub_pos: "Kỹ thuật viễn thông",
+                        source: "Custom",
+                        links: ["radio", "fm"]
+                    },
+                    {
+                        definition: "First-person singular present tense of the verb 'be' (used with 'I').",
+                        definition_lang: "en",
+                        example: "I am here.",
+                        pos: "Verb",
+                        sub_pos: "Auxiliary / Linking verb",
+                        source: "Custom",
+                        links: ["be"]
+                    },
+                    {
+                        definition: "Ante meridiem: before noon (used to refer to the time from midnight to noon).",
+                        definition_lang: "en",
+                        example: "Classes start at 8:30 am.",
+                        pos: "Adverb",
+                        sub_pos: "Time expression",
+                        source: "Custom",
+                        links: ["pm"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/æm/", region: "Động từ (nhấn mạnh)" },
+                    { ipa: "/əm/", region: "Động từ (dạng yếu)" },
+                    { ipa: "/ˌeɪ ˈem/", region: "Giờ giấc (A.M.)" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "thì, là, ở" },
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "giờ sáng (trước 12h trưa)" }
+                ],
+                relations: [
+                    { related_word: "be", relation_type: "Gốc từ" },
+                    { related_word: "pm", relation_type: "Đối lập thời gian (chiều/tối)" },
+                    { related_word: "is", relation_type: "Ngôi thứ 3 số ít" },
+                    { related_word: "are", relation_type: "Số nhiều" }
+                ]
+            },
+            {
+                lang_code: "vi",
+                lang_name: "Tiếng Việt",
+                audio: "/api/v1/tts?word=am&lang=vi",
+                meanings: [
+                    {
+                        definition: "Chùa nhỏ, miếu nhỏ, nơi thờ tự hoặc tu hành thanh tịnh.",
+                        definition_lang: "vi",
+                        example: "Ngôi am nhỏ nằm ẩn mình dưới bóng cây cổ thụ.",
+                        pos: "Danh từ",
+                        sub_pos: "Danh từ chỉ nơi chốn",
+                        source: "Custom",
+                        links: ["chùa", "miếu"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/aːm/", region: "Toàn quốc" }
+                ],
+                translations: [],
+                relations: []
+            }
+        ]
+    },
+
+    "is": {
+        word: "is",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=is&lang=en",
+                meanings: [
+                    {
+                        definition: "Thì, là, ở, bị, được (dạng chia thì hiện tại đơn của động từ to be, đi với chủ ngữ ngôi thứ ba số ít: he, she, it hoặc danh từ số ít).",
+                        definition_lang: "vi",
+                        example: "He is a doctor. / She is very kind. / Hanoi is the capital of Vietnam.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ to be (Ngôi thứ ba số ít)",
+                        source: "Custom",
+                        links: ["be", "am", "are", "was"]
+                    },
+                    {
+                        definition: "Third-person singular present tense of 'be' (used with he, she, it, or singular nouns).",
+                        definition_lang: "en",
+                        example: "The water is cold.",
+                        pos: "Verb",
+                        sub_pos: "Auxiliary / Linking verb",
+                        source: "Custom",
+                        links: ["be"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/ɪz/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "thì, là, ở" }
+                ],
+                relations: [
+                    { related_word: "be", relation_type: "Gốc từ" },
+                    { related_word: "am", relation_type: "Ngôi thứ nhất số ít" },
+                    { related_word: "are", relation_type: "Số nhiều / ngôi thứ 2" }
+                ]
+            }
+        ]
+    },
+
+    "are": {
+        word: "are",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=are&lang=en",
+                meanings: [
+                    {
+                        definition: "Thì, là, ở (dạng chia thì hiện tại đơn của động từ to be, đi với chủ ngữ ngôi thứ hai 'you' hoặc ngôi số nhiều 'we', 'they', danh từ số nhiều).",
+                        definition_lang: "vi",
+                        example: "You are welcome. / We are friends. / They are studying.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ to be (Số nhiều & Ngôi thứ hai)",
+                        source: "Custom",
+                        links: ["be", "am", "is", "were"]
+                    },
+                    {
+                        definition: "Đơn vị đo diện tích ruộng đất bằng 100 mét vuông (1 are = 100 m²).",
+                        definition_lang: "vi",
+                        example: "The plot of land measures 5 ares.",
+                        pos: "Danh từ",
+                        sub_pos: "Đơn vị đo lường",
+                        source: "Custom",
+                        links: ["hectare", "meter"]
+                    },
+                    {
+                        definition: "Present tense of 'be' used with you, we, they, and plural nouns.",
+                        definition_lang: "en",
+                        example: "Where are they going?",
+                        pos: "Verb",
+                        sub_pos: "Auxiliary / Linking verb",
+                        source: "Custom",
+                        links: ["be"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/ɑːr/", region: "US/UK (nhấn mạnh)" },
+                    { ipa: "/ər/", region: "US/UK (dạng yếu)" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "thì, là, ở" }
+                ],
+                relations: [
+                    { related_word: "be", relation_type: "Gốc từ" },
+                    { related_word: "am", relation_type: "Ngôi thứ nhất số ít" },
+                    { related_word: "is", relation_type: "Ngôi thứ 3 số ít" }
+                ]
+            }
+        ]
+    },
+
+    "was": {
+        word: "was",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=was&lang=en",
+                meanings: [
+                    {
+                        definition: "Đã thì, đã là, đã ở (thì quá khứ đơn của động từ to be, dùng cho chủ ngữ ngôi số ít: I, he, she, it, danh từ số ít).",
+                        definition_lang: "vi",
+                        example: "I was at home yesterday. / He was tired after work.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ to be (Quá khứ số ít)",
+                        source: "Custom",
+                        links: ["be", "were", "been"]
+                    },
+                    {
+                        definition: "First- and third-person singular past tense of 'be'.",
+                        definition_lang: "en",
+                        example: "She was my teacher.",
+                        pos: "Verb",
+                        sub_pos: "Past tense of be",
+                        source: "Custom",
+                        links: ["be"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/wɒz/", region: "UK" },
+                    { ipa: "/wʌz/", region: "US" },
+                    { ipa: "/wəz/", region: "Dạng yếu" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "đã là, đã ở (quá khứ)" }
+                ],
+                relations: [
+                    { related_word: "be", relation_type: "Gốc từ" },
+                    { related_word: "were", relation_type: "Quá khứ số nhiều" }
+                ]
+            }
+        ]
+    },
+
+    "were": {
+        word: "were",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=were&lang=en",
+                meanings: [
+                    {
+                        definition: "Đã thì, đã là, đã ở (thì quá khứ đơn của động từ to be, dùng cho chủ ngữ số nhiều hoặc ngôi thứ hai: you, we, they, danh từ số nhiều; và dùng trong câu điều kiện giả định).",
+                        definition_lang: "vi",
+                        example: "We were very happy. / If I were you, I would accept.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ to be (Quá khứ số nhiều / Giả định)",
+                        source: "Custom",
+                        links: ["be", "was", "been"]
+                    },
+                    {
+                        definition: "Second-person singular and plural and first- and third-person plural past tense of 'be'.",
+                        definition_lang: "en",
+                        example: "They were waiting outside.",
+                        pos: "Verb",
+                        sub_pos: "Past tense of be",
+                        source: "Custom",
+                        links: ["be"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/wɜːr/", region: "US/UK" },
+                    { ipa: "/wər/", region: "Dạng yếu" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "đã là, đã ở (quá khứ số nhiều)" }
+                ],
+                relations: [
+                    { related_word: "be", relation_type: "Gốc từ" },
+                    { related_word: "was", relation_type: "Quá khứ số ít" }
+                ]
+            }
+        ]
+    },
+
+    "been": {
+        word: "been",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=been&lang=en",
+                meanings: [
+                    {
+                        definition: "Đã từng là, đã ở (dạng quá khứ phân từ - Past Participle / V3 của động từ to be, dùng trong các thì hoàn thành và thể bị động).",
+                        definition_lang: "vi",
+                        example: "I have been to Paris twice. / The car has been repaired.",
+                        pos: "Động từ",
+                        sub_pos: "Phân từ hai (Past Participle - V3)",
+                        source: "Custom",
+                        links: ["be", "was", "were"]
+                    },
+                    {
+                        definition: "Past participle of 'be' (used in perfect tenses and passive voice).",
+                        definition_lang: "en",
+                        example: "How long have you been waiting?",
+                        pos: "Verb",
+                        sub_pos: "Past participle of be",
+                        source: "Custom",
+                        links: ["be"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/biːn/", region: "UK" },
+                    { ipa: "/bɪn/", region: "US" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "đã từng, đã là (V3)" }
+                ],
+                relations: [
+                    { related_word: "be", relation_type: "Gốc từ" }
+                ]
+            }
+        ]
+    },
+
+    "being": {
+        word: "being",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=being&lang=en",
+                meanings: [
+                    {
+                        definition: "Đang là, đang ở (dạng phân từ hiện tại / V-ing hoặc danh động từ của động từ to be).",
+                        definition_lang: "vi",
+                        example: "Why are you being so rude? / The house is being built.",
+                        pos: "Động từ",
+                        sub_pos: "Hiện tại phân từ (Present Participle / V-ing)",
+                        source: "Custom",
+                        links: ["be"]
+                    },
+                    {
+                        definition: "Sinh vật, con người, sự tồn tại (thực thể có tri giác).",
+                        definition_lang: "vi",
+                        example: "Every human being deserves respect. / Living beings.",
+                        pos: "Danh từ",
+                        sub_pos: "Danh từ đếm được",
+                        source: "Custom",
+                        links: ["human", "life"]
+                    },
+                    {
+                        definition: "Present participle of 'be'; also a living creature or person.",
+                        definition_lang: "en",
+                        example: "Human being / Being polite is important.",
+                        pos: "Verb / Noun",
+                        sub_pos: "V-ing / Creature",
+                        source: "Custom",
+                        links: ["be"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/ˈbiːɪŋ/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "đang là / sinh vật, con người" }
+                ],
+                relations: [
+                    { related_word: "be", relation_type: "Gốc từ" }
+                ]
+            }
+        ]
+    },
+
+    "pm": {
+        word: "pm",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=pm&lang=en",
+                meanings: [
+                    {
+                        definition: "Giờ buổi chiều và tối (từ 12:00 trưa đến 23:59 đêm). Viết tắt của cụm từ tiếng Latin 'post meridiem' (sau buổi trưa). Thường viết là: pm, p.m., PM hoặc P.M.",
+                        definition_lang: "vi",
+                        example: "The movie starts at 7:30 pm. / See you at 2 pm.",
+                        pos: "Phó từ / Viết tắt",
+                        sub_pos: "Chỉ thời gian (Time)",
+                        source: "Custom",
+                        links: ["am", "time", "clock"]
+                    },
+                    {
+                        definition: "Thủ tướng (viết tắt của Prime Minister).",
+                        definition_lang: "vi",
+                        example: "The PM addressed the parliament today.",
+                        pos: "Danh từ / Viết tắt",
+                        sub_pos: "Chức vụ",
+                        source: "Custom",
+                        links: []
+                    },
+                    {
+                        definition: "Tin nhắn riêng (viết tắt của Private Message trong tin nhắn trực tuyến).",
+                        definition_lang: "vi",
+                        example: "Send me a PM if you have any questions.",
+                        pos: "Danh từ / Động từ",
+                        sub_pos: "Internet slang",
+                        source: "Custom",
+                        links: ["dm"]
+                    },
+                    {
+                        definition: "Post meridiem: afternoon and evening (from noon until midnight).",
+                        definition_lang: "en",
+                        example: "We will meet at 6 pm.",
+                        pos: "Adverb",
+                        sub_pos: "Time expression",
+                        source: "Custom",
+                        links: ["am"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/ˌpiː ˈem/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "giờ chiều/tối (sau 12h trưa) / Thủ tướng" }
+                ],
+                relations: [
+                    { related_word: "am", relation_type: "Đối lập (giờ sáng)" }
+                ]
+            }
+        ]
+    },
+
+    "a.m.": {
+        word: "a.m.",
+        aliasTo: "am",
+        note: "Dạng viết có dấu chấm của 'am' (ante meridiem - giờ buổi sáng)."
+    },
+
+    "p.m.": {
+        word: "p.m.",
+        aliasTo: "pm",
+        note: "Dạng viết có dấu chấm của 'pm' (post meridiem - giờ buổi chiều và tối)."
+    },
+
+    // 0.4. Trợ động từ & Động từ khiếm khuyết (does, can, could, will, would, should)
+    "does": {
+        word: "does",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=does&lang=en",
+                meanings: [
+                    {
+                        definition: "Làm, thực hiện (dạng chia thì hiện tại đơn của động từ 'do', dùng cho chủ ngữ ngôi thứ ba số ít: he, she, it hoặc danh từ số ít).",
+                        definition_lang: "vi",
+                        example: "He does his homework every evening. / What does she do?",
+                        pos: "Động từ",
+                        sub_pos: "Động từ chính (Ngôi thứ 3 số ít)",
+                        source: "Custom",
+                        links: ["do", "did", "done"]
+                    },
+                    {
+                        definition: "Trợ động từ dùng để tạo câu hỏi và câu phủ định (doesn't) ở thì hiện tại đơn cho ngôi thứ ba số ít; hoặc dùng để nhấn mạnh hành động.",
+                        definition_lang: "vi",
+                        example: "Does he speak English? / She doesn't like tea. / He does love you!",
+                        pos: "Trợ động từ",
+                        sub_pos: "Auxiliary Verb",
+                        source: "Custom",
+                        links: ["do", "doesn't"]
+                    },
+                    {
+                        definition: "Third-person singular present tense of 'do'.",
+                        definition_lang: "en",
+                        example: "She does all the cooking.",
+                        pos: "Verb",
+                        sub_pos: "Auxiliary / Main verb",
+                        source: "Custom",
+                        links: ["do"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/dʌz/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "làm, thực hiện (ngôi thứ 3 số ít)" }
+                ],
+                relations: [
+                    { related_word: "do", relation_type: "Gốc từ" },
+                    { related_word: "did", relation_type: "Quá khứ" },
+                    { related_word: "done", relation_type: "Phân từ hai" }
+                ]
+            }
+        ]
+    },
+
+    "can": {
+        word: "can",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=can&lang=en",
+                meanings: [
+                    {
+                        definition: "Có thể, biết làm gì (động từ khiếm khuyết diễn tả khả năng, năng lực, sự cho phép hoặc lời yêu cầu lịch sự).",
+                        definition_lang: "vi",
+                        example: "I can swim. / Can you help me? / You can sit here.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ khiếm khuyết (Modal Verb)",
+                        source: "Custom",
+                        links: ["could", "can't", "be able to"]
+                    },
+                    {
+                        definition: "Cái lon, hộp thiếc, bình kim loại (dùng đựng đồ ăn, nước ngọt).",
+                        definition_lang: "vi",
+                        example: "A can of soda / a can of tuna.",
+                        pos: "Danh từ",
+                        sub_pos: "Đồ vật / Vật chứa",
+                        source: "Custom",
+                        links: ["tin", "bottle"]
+                    },
+                    {
+                        definition: "Đóng hộp (bảo quản thức ăn trong hộp thiếc).",
+                        definition_lang: "vi",
+                        example: "Canned fruit.",
+                        pos: "Động từ",
+                        sub_pos: "Ngoại động từ",
+                        source: "Custom",
+                        links: []
+                    },
+                    {
+                        definition: "Be able to; also a metal container for food or drink.",
+                        definition_lang: "en",
+                        example: "She can play the piano.",
+                        pos: "Modal verb / Noun",
+                        sub_pos: "Ability / Container",
+                        source: "Custom",
+                        links: ["could"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/kæn/", region: "US/UK (nhấn mạnh)" },
+                    { ipa: "/kən/", region: "US/UK (dạng yếu)" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "có thể / cái lon" }
+                ],
+                relations: [
+                    { related_word: "could", relation_type: "Quá khứ" },
+                    { related_word: "can't", relation_type: "Phủ định" }
+                ]
+            }
+        ]
+    },
+
+    "could": {
+        word: "could",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=could&lang=en",
+                meanings: [
+                    {
+                        definition: "Đã có thể (thì quá khứ của 'can'); hoặc dùng để diễn tả khả năng trong tương lai/hiện tại, và lời yêu cầu rất lịch sự.",
+                        definition_lang: "vi",
+                        example: "When I was young, I could run fast. / Could you please open the door? / It could rain tomorrow.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ khiếm khuyết (Modal Verb)",
+                        source: "Custom",
+                        links: ["can", "couldn't"]
+                    },
+                    {
+                        definition: "Used as the past tense of 'can', to indicate possibility, or to make polite requests.",
+                        definition_lang: "en",
+                        example: "Could you help me with this?",
+                        pos: "Modal verb",
+                        sub_pos: "Past of can / Politeness",
+                        source: "Custom",
+                        links: ["can"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/kʊd/", region: "US/UK" },
+                    { ipa: "/kəd/", region: "Dạng yếu" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "đã có thể, có thể (lịch sự)" }
+                ],
+                relations: [
+                    { related_word: "can", relation_type: "Gốc từ" },
+                    { related_word: "couldn't", relation_type: "Phủ định" }
+                ]
+            }
+        ]
+    },
+
+    "will": {
+        word: "will",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=will&lang=en",
+                meanings: [
+                    {
+                        definition: "Sẽ (trợ động từ khiếm khuyết dùng để diễn tả hành động trong tương lai, sự quyết tâm, lời hứa hoặc đề nghị).",
+                        definition_lang: "vi",
+                        example: "I will call you tomorrow. / Will you marry me? / It will be fine.",
+                        pos: "Động từ",
+                        sub_pos: "Trợ động từ tương lai (Modal Auxiliary Verb)",
+                        source: "Custom",
+                        links: ["would", "won't"]
+                    },
+                    {
+                        definition: "Ý chí, nghị lực, ý định, nguyện vọng.",
+                        definition_lang: "vi",
+                        example: "A strong will to succeed. / Where there's a will, there's a way.",
+                        pos: "Danh từ",
+                        sub_pos: "Danh từ trừu tượng",
+                        source: "Custom",
+                        links: []
+                    },
+                    {
+                        definition: "Di chúc (văn bản pháp lý ghi lại ý nguyện phân chia tài sản sau khi mất).",
+                        definition_lang: "vi",
+                        example: "He left all his money to charity in his will.",
+                        pos: "Danh từ",
+                        sub_pos: "Pháp lý",
+                        source: "Custom",
+                        links: []
+                    },
+                    {
+                        definition: "Expressing the future tense, determination, or willingness; also a legal document or desire.",
+                        definition_lang: "en",
+                        example: "They will arrive soon.",
+                        pos: "Modal verb / Noun",
+                        sub_pos: "Future / Desire",
+                        source: "Custom",
+                        links: ["would"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/wɪl/", region: "US/UK" },
+                    { ipa: "/wəl/", region: "Dạng yếu" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "sẽ / ý chí, di chúc" }
+                ],
+                relations: [
+                    { related_word: "would", relation_type: "Quá khứ" },
+                    { related_word: "won't", relation_type: "Phủ định" }
+                ]
+            }
+        ]
+    },
+
+    "would": {
+        word: "would",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=would&lang=en",
+                meanings: [
+                    {
+                        definition: "Sẽ (dạng quá khứ của 'will' trong lời nói gián tiếp); dùng trong câu điều kiện (would do); hoặc dùng để mời mọc, đề nghị lịch sự (Would you like...?).",
+                        definition_lang: "vi",
+                        example: "Would you like a cup of coffee? / If I had money, I would travel around the world. / He said he would come.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ khiếm khuyết (Modal Verb)",
+                        source: "Custom",
+                        links: ["will", "wouldn't"]
+                    },
+                    {
+                        definition: "Used as the past of 'will' in reported speech, in conditional sentences, or for polite requests.",
+                        definition_lang: "en",
+                        example: "Would you mind closing the window?",
+                        pos: "Modal verb",
+                        sub_pos: "Polite request / Conditional",
+                        source: "Custom",
+                        links: ["will"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/wʊd/", region: "US/UK" },
+                    { ipa: "/wəd/", region: "Dạng yếu" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "sẽ (quá khứ/giả định), xin mời (lịch sự)" }
+                ],
+                relations: [
+                    { related_word: "will", relation_type: "Gốc từ" },
+                    { related_word: "wouldn't", relation_type: "Phủ định" }
+                ]
+            }
+        ]
+    },
+
+    "should": {
+        word: "should",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=should&lang=en",
+                meanings: [
+                    {
+                        definition: "Nên, phải (động từ khiếm khuyết dùng để đưa ra lời khuyên, ý kiến, nghĩa vụ đạo đức hoặc dự đoán điều có thể xảy ra).",
+                        definition_lang: "vi",
+                        example: "You should see a doctor. / We should leave early. / It should be ready by now.",
+                        pos: "Động từ",
+                        sub_pos: "Động từ khiếm khuyết (Modal Verb - Khuyên bảo)",
+                        source: "Custom",
+                        links: ["ought to", "must", "shouldn't"]
+                    },
+                    {
+                        definition: "Used to give advice, make recommendations, or indicate obligation.",
+                        definition_lang: "en",
+                        example: "You should exercise more often.",
+                        pos: "Modal verb",
+                        sub_pos: "Advice / Obligation",
+                        source: "Custom",
+                        links: ["ought to"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/ʃʊd/", region: "US/UK" },
+                    { ipa: "/ʃəd/", region: "Dạng yếu" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "nên, phải" }
+                ],
+                relations: [
+                    { related_word: "shouldn't", relation_type: "Phủ định" },
+                    { related_word: "ought to", relation_type: "Đồng nghĩa" }
+                ]
+            }
+        ]
+    },
+
+    // 0.5. Đại từ cốt lõi (who, mine)
+    "who": {
+        word: "who",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=who&lang=en",
+                meanings: [
+                    {
+                        definition: "Ai, người nào (đại từ nghi vấn dùng để hỏi danh tính của người).",
+                        definition_lang: "vi",
+                        example: "Who is that man? / Who told you that?",
+                        pos: "Đại từ",
+                        sub_pos: "Đại từ nghi vấn (Interrogative Pronoun)",
+                        source: "Custom",
+                        links: ["whom", "whose"]
+                    },
+                    {
+                        definition: "Người mà, kẻ mà (đại từ quan hệ dùng để thay thế cho danh từ chỉ người đứng trước nó).",
+                        definition_lang: "vi",
+                        example: "The person who called you is my brother.",
+                        pos: "Đại từ",
+                        sub_pos: "Đại từ quan hệ (Relative Pronoun)",
+                        source: "Custom",
+                        links: ["whom", "which"]
+                    },
+                    {
+                        definition: "Tổ chức Y tế Thế giới (viết tắt của World Health Organization, viết hoa là WHO).",
+                        definition_lang: "vi",
+                        example: "A report from the WHO.",
+                        pos: "Danh từ / Viết tắt",
+                        sub_pos: "Tổ chức quốc tế",
+                        source: "Custom",
+                        links: []
+                    },
+                    {
+                        definition: "What or which person or people (used to ask questions or introduce a relative clause).",
+                        definition_lang: "en",
+                        example: "Who wants some ice cream?",
+                        pos: "Pronoun",
+                        sub_pos: "Interrogative / Relative",
+                        source: "Custom",
+                        links: ["whom"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/huː/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "ai, người nào" }
+                ],
+                relations: [
+                    { related_word: "whom", relation_type: "Dạng tân ngữ" },
+                    { related_word: "whose", relation_type: "Dạng sở hữu" }
+                ]
+            }
+        ]
+    },
+
+    "mine": {
+        word: "mine",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=mine&lang=en",
+                meanings: [
+                    {
+                        definition: "Của tôi (đại từ sở hữu dùng độc lập, thay thế cho cụm 'my + danh từ').",
+                        definition_lang: "vi",
+                        example: "This book is mine. / A friend of mine.",
+                        pos: "Đại từ",
+                        sub_pos: "Đại từ sở hữu (Possessive Pronoun)",
+                        source: "Custom",
+                        links: ["my", "me", "I"]
+                    },
+                    {
+                        definition: "Mỏ (nơi khai thác than, vàng, quặng kim loại dưới lòng đất).",
+                        definition_lang: "vi",
+                        example: "A coal mine / gold mine.",
+                        pos: "Danh từ",
+                        sub_pos: "Khai khoáng",
+                        source: "Custom",
+                        links: ["mining", "miner"]
+                    },
+                    {
+                        definition: "Quả mìn, địa lôi (vũ khí nổ đặt dưới đất hoặc dưới nước).",
+                        definition_lang: "vi",
+                        example: "A land mine.",
+                        pos: "Danh từ",
+                        sub_pos: "Quân sự",
+                        source: "Custom",
+                        links: []
+                    },
+                    {
+                        definition: "The one or ones belonging to me; also an excavation in the earth for extracting minerals.",
+                        definition_lang: "en",
+                        example: "That pen is mine.",
+                        pos: "Pronoun / Noun",
+                        sub_pos: "Possessive / Excavation",
+                        source: "Custom",
+                        links: ["my"]
+                    }
+                ],
+                pronunciations: [
+                    { ipa: "/maɪn/", region: "US/UK" }
+                ],
+                translations: [
+                    { lang_code: "vi", lang_name: "Tiếng Việt", translation: "của tôi / mỏ khoáng sản" }
+                ],
+                relations: [
+                    { related_word: "my", relation_type: "Tính từ sở hữu" },
+                    { related_word: "I", relation_type: "Gốc từ" }
+                ]
+            }
+        ]
+    },
+
     // 1. Từ viết tắt "he's"
     "he's": {
         word: "he's",

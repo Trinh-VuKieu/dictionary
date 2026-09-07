@@ -240,9 +240,41 @@ export function getLemmas(word: string): LemmaResult[] {
     const seen = new Set<string>();
 
     try {
+        // Ưu tiên đặc biệt cho các trợ động từ và động từ bất quy tắc phổ biến nhất
+        // nhằm tránh việc lemmatize noun hiểu nhầm (ví dụ: does -> doe "con hươu cái")
+        const VERB_PRIORITY_WORDS: Record<string, string> = {
+            'does': 'do',
+            'did': 'do',
+            'done': 'do',
+            'has': 'have',
+            'had': 'have',
+            'having': 'have',
+            'am': 'be',
+            'is': 'be',
+            'are': 'be',
+            'was': 'be',
+            'were': 'be',
+            'been': 'be',
+            'being': 'be',
+            'went': 'go',
+            'gone': 'go',
+            'goes': 'go'
+        };
+
+        if (VERB_PRIORITY_WORDS[lower]) {
+            const priorityRoot = VERB_PRIORITY_WORDS[lower];
+            seen.add(priorityRoot);
+            results.push({
+                lemma: priorityRoot,
+                posType: 'verb',
+                explanation: `Dạng chia thì (quá khứ / phân từ / tiếp diễn / ngôi thứ ba) của động từ "${priorityRoot}".`
+            });
+        }
+
         // 1. Danh từ số nhiều (classes -> class, children -> child, mice -> mouse, teeth -> tooth)
         const nounLemma = lemmatize.noun(lower);
-        if (nounLemma && nounLemma !== lower && !seen.has(nounLemma)) {
+        // Bỏ qua nếu là từ nằm trong danh sách động từ ưu tiên (ví dụ does không lấy doe)
+        if (nounLemma && nounLemma !== lower && !seen.has(nounLemma) && !VERB_PRIORITY_WORDS[lower]) {
             seen.add(nounLemma);
             results.push({
                 lemma: nounLemma,

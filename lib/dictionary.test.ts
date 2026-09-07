@@ -615,5 +615,73 @@ describe('Dictionary Module', () => {
             expect(result.results.length).toBeGreaterThan(0);
             expect(result.results[0].meanings.length).toBeGreaterThan(0);
         }, 10000);
+
+        it('should have correct multi-meaning definition for "am" (to be verb + ante meridiem time + AM radio)', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const result = await lookupWord('am', 'en');
+            expect(result.exists).toBe(true);
+            const enRes = result.results.find(r => r.lang_code === 'en');
+            expect(enRes).toBeDefined();
+            expect(enRes!.audio).toBe('/api/v1/tts?word=am&lang=en');
+            // Must have to be meaning
+            const hasVerb = enRes!.meanings.some(m => m.pos === 'Động từ' && m.definition.includes('to be'));
+            expect(hasVerb).toBe(true);
+            // Must have time meaning (ante meridiem)
+            const hasTime = enRes!.meanings.some(m => m.definition.includes('ante meridiem') || m.definition.includes('buổi sáng'));
+            expect(hasTime).toBe(true);
+            // Must have IPA for verb and time
+            const ipas = enRes!.pronunciations.map(p => p.ipa);
+            expect(ipas).toContain('/æm/');
+            expect(ipas).toContain('/ˌeɪ ˈem/');
+        });
+
+        it('should have correct to be definition for "is" and "are"', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const resIs = await lookupWord('is', 'en');
+            expect(resIs.exists).toBe(true);
+            const enIs = resIs.results.find(r => r.lang_code === 'en');
+            expect(enIs!.meanings[0].pos).toBe('Động từ');
+            expect(enIs!.meanings[0].definition).toContain('to be');
+            expect(enIs!.pronunciations[0].ipa).toBe('/ɪz/');
+
+            const resAre = await lookupWord('are', 'en');
+            expect(resAre.exists).toBe(true);
+            const enAre = resAre.results.find(r => r.lang_code === 'en');
+            expect(enAre!.meanings[0].pos).toBe('Động từ');
+            expect(enAre!.meanings[0].definition).toContain('to be');
+        });
+
+        it('should correctly resolve "does" as verb "do" and NOT female deer "doe"', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const result = await lookupWord('does', 'en');
+            expect(result.exists).toBe(true);
+            const enRes = result.results.find(r => r.lang_code === 'en');
+            expect(enRes).toBeDefined();
+            expect(enRes!.meanings[0].definition).toContain("động từ 'do'");
+            expect(enRes!.meanings[0].definition).not.toContain("hươu");
+            expect(enRes!.pronunciations[0].ipa).toBe('/dʌz/');
+        });
+
+        it('should resolve "who", "mine", and "should" with primary pedagogical definitions', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const resWho = await lookupWord('who', 'en');
+            const enWho = resWho.results.find(r => r.lang_code === 'en');
+            expect(enWho!.meanings[0].definition).toContain('Ai, người nào');
+
+            const resMine = await lookupWord('mine', 'en');
+            const enMine = resMine.results.find(r => r.lang_code === 'en');
+            expect(enMine!.meanings[0].definition).toContain('Của tôi');
+
+            const resShould = await lookupWord('should', 'en');
+            const enShould = resShould.results.find(r => r.lang_code === 'en');
+            expect(enShould!.meanings[0].definition.length).toBeGreaterThan(5);
+            expect(enShould!.meanings[0].definition).toContain('Nên');
+        });
+
+        it('should strictly reject Wikipedia disambiguation pages in wiki fallback', async () => {
+            const { lookupWikiFallback } = await import('./wiki_fallback');
+            const res = await lookupWikiFallback('AM');
+            expect(res).toBeNull();
+        });
     })
 })

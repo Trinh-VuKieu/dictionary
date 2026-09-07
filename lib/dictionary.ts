@@ -504,10 +504,13 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
             }
         }
 
-        // Nếu là dạng aliasTo (chuyển hướng lấy nghĩa từ từ gốc, ví dụ classes -> class)
+        // Nếu là dạng aliasTo (chuyển hướng lấy nghĩa từ từ gốc, ví dụ classes -> class, a.m. -> am)
         const targetAlias = customEntry.aliasTo;
         if (targetAlias) {
-            const baseResult = lookupDirectFromDb(targetAlias, lang);
+            const targetCustom = getCustomWord(targetAlias);
+            const baseResult = (targetCustom && targetCustom.results && targetCustom.results.length > 0)
+                ? { exists: true, word: targetCustom.word, results: lang ? targetCustom.results.filter(r => r.lang_code === lang) : targetCustom.results }
+                : lookupDirectFromDb(targetAlias, lang);
             if (baseResult.exists) {
                 const results = baseResult.results.map(r => {
                     if (r.lang_code === 'en' || !lang) {
