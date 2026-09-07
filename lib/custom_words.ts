@@ -1311,6 +1311,465 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
         word: "apr",
         aliasTo: "april",
         note: "Dạng viết tắt của tháng Tư (April)."
+    },
+
+    // --- BỘ TỪ CỐT LÕI TIẾNG ANH & CÔNG NGHỆ CHUẨN MỰC ---
+    "new": {
+        word: "new",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=new&lang=en",
+            meanings: [
+                { definition: "Mới, mới mẻ, mới lạ (vừa mới sản xuất, phát minh, mua sắm hoặc xuất hiện, chưa qua sử dụng).", definition_lang: "vi", example: "I bought a new car. / Happy New Year!", pos: "Tính từ", sub_pos: "Phẩm chất / Trạng thái", source: "Custom", links: ["old", "fresh"] },
+                { definition: "Mới tinh, hoàn toàn mới (brand new).", definition_lang: "vi", example: "Her shoes look as good as new.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Chưa quen việc, bỡ ngỡ, mới đến nơi làm việc/trường học.", definition_lang: "vi", example: "Don't worry, she is still new to this job.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Recently created, built, acquired, or discovered; not existing before.", definition_lang: "en", example: "Scientists discovered a new species of frog.", pos: "Adjective", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Những điều mới mẻ, cái mới (Out with the old, in with the new).", definition_lang: "vi", example: "Ring in the new year.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/njuː/", region: "UK" }, { ipa: "/nuː/", region: "US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "mới, mới mẻ" }],
+            relations: [
+                { related_word: "old", relation_type: "Trái nghĩa" },
+                { related_word: "fresh", relation_type: "Đồng nghĩa" },
+                { related_word: "novel", relation_type: "Đồng nghĩa" },
+                { related_word: "modern", relation_type: "Đồng nghĩa" }
+            ]
+        }]
+    },
+
+    "eat": {
+        word: "eat",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=eat&lang=en",
+            meanings: [
+                { definition: "Ăn, dùng bữa, nuốt (đưa thức ăn vào miệng, nhai và nuốt).", definition_lang: "vi", example: "What time do you usually eat breakfast?", pos: "Động từ", sub_pos: "Ngoại động từ & Nội động từ", source: "Custom", links: ["food"] },
+                { definition: "Đi ăn ngoài, ăn tiệm (eat out).", definition_lang: "vi", example: "Let's eat out tonight at an Italian restaurant.", pos: "Động từ", sub_pos: "Cụm động từ", source: "Custom", links: [] },
+                { definition: "Ăn mòn, xói mòn, làm hao mòn dần (eat away at).", definition_lang: "vi", example: "Acid rain is eating away at the historic marble statue.", pos: "Động từ", sub_pos: "Nghĩa bóng", source: "Custom", links: [] },
+                { definition: "To put food into your mouth, chew it, and swallow it.", definition_lang: "en", example: "You should eat more fruits and vegetables.", pos: "Verb", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/iːt/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "ăn, dùng bữa" }],
+            relations: [
+                { related_word: "ate", relation_type: "Dạng quá khứ" },
+                { related_word: "eaten", relation_type: "Quá khứ phân từ" },
+                { related_word: "drink", relation_type: "Trái nghĩa" },
+                { related_word: "food", relation_type: "Liên quan" }
+            ]
+        }]
+    },
+
+    "baby": {
+        word: "baby",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=baby&lang=en",
+            meanings: [
+                { definition: "Em bé, đứa trẻ sơ sinh (từ khi sinh ra đến khi biết đi).", definition_lang: "vi", example: "She gave birth to a healthy baby girl.", pos: "Danh từ", sub_pos: null, source: "Custom", links: ["child", "infant"] },
+                { definition: "Con non, con thú con mới sinh.", definition_lang: "vi", example: "A baby elephant / A baby bird.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Em yêu, cưng (cách gọi thân mật, âu yếm người yêu hoặc vợ/chồng).", definition_lang: "vi", example: "Hey baby, I miss you so much!", pos: "Danh từ", sub_pos: "Thân mật", source: "Custom", links: [] },
+                { definition: "Nhỏ, kích thước nhỏ (baby carrots, baby tomatoes).", definition_lang: "vi", example: "Baby carrots are sweet and crunchy.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈbeɪbi/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "em bé, đứa trẻ sơ sinh" }],
+            relations: [
+                { related_word: "infant", relation_type: "Đồng nghĩa" },
+                { related_word: "child", relation_type: "Liên quan" },
+                { related_word: "babies", relation_type: "Số nhiều" }
+            ]
+        }]
+    },
+
+    "machine": {
+        word: "machine",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=machine&lang=en",
+            meanings: [
+                { definition: "Máy móc, cỗ máy, thiết bị cơ giới (thiết bị hoạt động nhờ điện năng hoặc cơ năng để hỗ trợ công việc con người).", definition_lang: "vi", example: "Washing machine, sewing machine, cash machine (ATM).", pos: "Danh từ", sub_pos: null, source: "Custom", links: ["device"] },
+                { definition: "Bộ máy chính trị, cơ cấu tổ chức vận hành.", definition_lang: "vi", example: "The political machine of the government.", pos: "Danh từ", sub_pos: "Nghĩa bóng", source: "Custom", links: [] },
+                { definition: "Gia công cơ khí, tiện/phay bằng máy.", definition_lang: "vi", example: "The components are machined from aircraft-grade aluminum.", pos: "Động từ", sub_pos: "Kỹ thuật", source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/məˈʃiːn/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "máy móc, cỗ máy" }],
+            relations: [
+                { related_word: "device", relation_type: "Liên quan" },
+                { related_word: "apparatus", relation_type: "Đồng nghĩa" }
+            ]
+        }]
+    },
+
+    "music": {
+        word: "music",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=music&lang=en",
+            meanings: [
+                { definition: "Âm nhạc, bản nhạc, tiếng nhạc, giai điệu du dương.", definition_lang: "vi", example: "She loves listening to classical and pop music.", pos: "Danh từ", sub_pos: "Danh từ không đếm được", source: "Custom", links: ["song"] },
+                { definition: "Nghệ thuật âm nhạc hoặc ngành học âm nhạc.", definition_lang: "vi", example: "He studied music at the national conservatory.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Âm thanh dễ chịu, lời nói làm vui lòng (music to somebody's ears).", definition_lang: "vi", example: "His praise was music to my ears.", pos: "Thành ngữ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Chấp nhận hậu quả hoặc hình phạt do sai lầm (face the music).", definition_lang: "vi", example: "You broke the window, now you have to face the music.", pos: "Thành ngữ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈmjuːzɪk/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "âm nhạc" }],
+            relations: [
+                { related_word: "song", relation_type: "Liên quan" },
+                { related_word: "musical", relation_type: "Từ phái sinh" }
+            ]
+        }]
+    },
+
+    "white": {
+        word: "white",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=white&lang=en",
+            meanings: [
+                { definition: "Màu trắng (màu của tuyết, sữa; phản chiếu toàn bộ các bước sóng ánh sáng).", definition_lang: "vi", example: "A white shirt / White snow.", pos: "Tính từ", sub_pos: null, source: "Custom", links: ["color"] },
+                { definition: "Thuộc người da trắng (chủng tộc da trắng).", definition_lang: "vi", example: "White population.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Bạc, hoa râm (mái tóc vì tuổi tác).", definition_lang: "vi", example: "His hair had turned completely white with age.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Tái nhợt, xanh mét (khuôn mặt vì hoảng sợ hoặc ốm đau).", definition_lang: "vi", example: "Her face went white as a sheet when she heard the news.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Màu trắng; Lòng trắng trứng (egg white); Tròng trắng mắt (white of the eye).", definition_lang: "vi", example: "Separate the egg yolks from the whites.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/waɪt/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "màu trắng" }],
+            relations: [
+                { related_word: "black", relation_type: "Trái nghĩa" }
+            ]
+        }]
+    },
+
+    "table": {
+        word: "table",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=table&lang=en",
+            meanings: [
+                { definition: "Cái bàn (đồ nội thất gồm mặt phẳng đỡ bởi các chân dùng để ăn, làm việc).", definition_lang: "vi", example: "Dinner table / Coffee table / Please sit at the table.", pos: "Danh từ", sub_pos: null, source: "Custom", links: ["furniture"] },
+                { definition: "Bảng biểu, bảng số liệu, mục lục (table of contents).", definition_lang: "vi", example: "Table 1 shows the experimental results.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Đệ trình dự luật/kế hoạch để thảo luận (tiếng Anh Anh) hoặc hoãn xem xét (tiếng Anh Mỹ).", definition_lang: "vi", example: "The committee tabled a proposal for tax reform.", pos: "Động từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈteɪbl/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "cái bàn, bảng biểu" }],
+            relations: [
+                { related_word: "desk", relation_type: "Liên quan" },
+                { related_word: "chair", relation_type: "Liên quan" }
+            ]
+        }]
+    },
+
+    "friendship": {
+        word: "friendship",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=friendship&lang=en",
+            meanings: [
+                { definition: "Tình bạn, tình hữu nghị, mối quan hệ thân thiết giữa bạn bè.", definition_lang: "vi", example: "Their friendship lasted for more than forty years.", pos: "Danh từ", sub_pos: "Danh từ trừu tượng", source: "Custom", links: ["friend"] },
+                { definition: "Mối quan hệ ngoại giao hữu nghị tốt đẹp giữa các quốc gia.", definition_lang: "vi", example: "A treaty of peace and friendship between the two countries.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈfrendʃɪp/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "tình bạn, tình hữu nghị" }],
+            relations: [
+                { related_word: "friend", relation_type: "Gốc từ" },
+                { related_word: "friendly", relation_type: "Từ phái sinh" }
+            ]
+        }]
+    },
+
+    "off": {
+        word: "off",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=off&lang=en",
+            meanings: [
+                { definition: "Tắt, ngắt kết nối, không hoạt động (trái ngược hoàn toàn với 'on').", definition_lang: "vi", example: "Please turn off the lights when leaving.", pos: "Phó từ", sub_pos: null, source: "Custom", links: ["on"] },
+                { definition: "Rời khỏi, đi khỏi, cách xa.", definition_lang: "vi", example: "He took off his coat and ran off into the garden.", pos: "Phó từ / Giới từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Giảm giá, giảm trừ tiền.", definition_lang: "vi", example: "Get 20% off all shoes today!", pos: "Giới từ / Phó từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Nghỉ làm, nghỉ việc, nghỉ phép (day off).", definition_lang: "vi", example: "I have tomorrow off so we can go hiking.", pos: "Tính từ / Phó từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ɒf/", region: "UK" }, { ipa: "/ɔːf/", region: "US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "tắt, ngắt, rời khỏi, giảm giá" }],
+            relations: [
+                { related_word: "on", relation_type: "Trái nghĩa" }
+            ]
+        }]
+    },
+
+    "problem": {
+        word: "problem",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=problem&lang=en",
+            meanings: [
+                { definition: "Vấn đề, trở ngại, chuyện phiền toái, điều khó khăn cần giải quyết.", definition_lang: "vi", example: "We need to solve this financial problem immediately.", pos: "Danh từ", sub_pos: null, source: "Custom", links: ["solution", "issue"] },
+                { definition: "Bài toán khó, câu hỏi hóc búa cần suy nghĩ tìm lời giải.", definition_lang: "vi", example: "A complex mathematical problem.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Không có vấn đề gì / Không sao đâu! (Thành ngữ giao tiếp lịch sự: No problem!).", definition_lang: "vi", example: "Thanks for helping me! - No problem!", pos: "Thành ngữ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈprɒbləm/", region: "UK" }, { ipa: "/ˈprɑːbləm/", region: "US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "vấn đề, trở ngại, bài toán" }],
+            relations: [
+                { related_word: "solution", relation_type: "Trái nghĩa" },
+                { related_word: "issue", relation_type: "Đồng nghĩa" },
+                { related_word: "trouble", relation_type: "Đồng nghĩa" }
+            ]
+        }]
+    },
+
+    "single": {
+        word: "single",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=single&lang=en",
+            meanings: [
+                { definition: "Độc thân (chưa kết hôn hoặc chưa có người yêu).", definition_lang: "vi", example: "Are you single or in a relationship?", pos: "Tính từ", sub_pos: null, source: "Custom", links: ["married"] },
+                { definition: "Đơn lẻ, chỉ một, duy nhất.", definition_lang: "vi", example: "She didn't utter a single word all morning.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Dành cho một người (phòng đơn, giường đơn).", definition_lang: "vi", example: "I would like to book a single room.", pos: "Tính từ", sub_pos: null, source: "Custom", links: [] },
+                { definition: "Vé một chiều (single ticket).", definition_lang: "vi", example: "A single ticket to Tokyo, please.", pos: "Danh từ", sub_pos: null, source: "Custom", links: ["return"] },
+                { definition: "Đĩa đơn âm nhạc (bản ghi âm một bài hát độc lập).", definition_lang: "vi", example: "The singer just released her hit single.", pos: "Danh từ", sub_pos: "Âm nhạc", source: "Custom", links: [] },
+                { definition: "Chọn ra, nhắm vào, tách riêng ra để đối xử đặc biệt (single out).", definition_lang: "vi", example: "Why do you always single me out for criticism?", pos: "Động từ", sub_pos: "Cụm động từ", source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈsɪŋɡl/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "độc thân, đơn lẻ, đĩa đơn" }],
+            relations: [
+                { related_word: "married", relation_type: "Trái nghĩa" },
+                { related_word: "double", relation_type: "Trái nghĩa" },
+                { related_word: "solo", relation_type: "Đồng nghĩa" }
+            ]
+        }]
+    },
+
+    "district": {
+        word: "district",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=district&lang=en",
+            meanings: [
+                { definition: "Quận, huyện, khu vực hành chính, địa hạt.", definition_lang: "vi", example: "District 1, Ho Chi Minh City / A rural district.", pos: "Danh từ", sub_pos: "Hành chính", source: "Custom", links: ["region"] },
+                { definition: "Khu vực đặc trưng theo công năng (khu thương mại, khu tài chính, khu giáo dục).", definition_lang: "vi", example: "The financial district of London / A school district.", pos: "Danh từ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈdɪstrɪkt/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "quận, huyện, địa hạt" }],
+            relations: [
+                { related_word: "area", relation_type: "Liên quan" },
+                { related_word: "quarter", relation_type: "Đồng nghĩa" }
+            ]
+        }]
+    },
+
+    "mindset": {
+        word: "mindset",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=mindset&lang=en",
+            meanings: [
+                { definition: "Tư duy, cách suy nghĩ, định hướng tâm lý, nếp nghĩ cố hữu của một cá nhân hoặc tập thể.", definition_lang: "vi", example: "Developing a growth mindset is key to success in learning.", pos: "Danh từ", sub_pos: "Tâm lý học", source: "Custom", links: ["attitude", "thinking"] },
+                { definition: "A set of attitudes or established way of thinking that influences how a person responds to situations.", definition_lang: "en", example: "We need a complete shift in our organizational mindset.", pos: "Noun", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˈmaɪndset/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "tư duy, nếp nghĩ" }],
+            relations: [
+                { related_word: "attitude", relation_type: "Đồng nghĩa" },
+                { related_word: "mindsets", relation_type: "Số nhiều" }
+            ]
+        }]
+    },
+
+    "mindsets": {
+        word: "mindsets",
+        aliasTo: "mindset",
+        note: "Dạng số nhiều của danh từ 'mindset' (những tư duy, những nếp nghĩ). Ví dụ: Cultivating healthy mindsets."
+    },
+
+    "shown": {
+        word: "shown",
+        aliasTo: "show",
+        note: "Dạng quá khứ phân từ (Past Participle - V3) của động từ 'show' (được chỉ ra, được cho thấy, được trình diễn)."
+    },
+
+    "selves": {
+        word: "selves",
+        aliasTo: "self",
+        note: "Dạng số nhiều của danh từ 'self' (những bản thân, những cái tôi)."
+    },
+
+    // --- CÁC TỪ VIẾT TẮT THƯỜNG GẶP TRONG CÔNG NGHỆ & GIAO TIẾP ---
+    "asap": {
+        word: "asap",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=asap&lang=en",
+            meanings: [
+                { definition: "Càng sớm càng tốt (viết tắt của 'as soon as possible').", definition_lang: "vi", example: "Please send me the report ASAP.", pos: "Phó từ / Viết tắt", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌeɪ.es.eɪˈpiː/", region: "UK/US" }, { ipa: "/ˈeɪ.sæp/", region: "Khẩu ngữ" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "càng sớm càng tốt" }],
+            relations: []
+        }]
+    },
+
+    "aka": {
+        word: "aka",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=aka&lang=en",
+            meanings: [
+                { definition: "Còn được gọi là, biệt danh là (viết tắt của 'also known as').", definition_lang: "vi", example: "Stephen King, aka Richard Bachman.", pos: "Cụm từ viết tắt", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌeɪ.keɪˈeɪ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "còn gọi là" }],
+            relations: []
+        }]
+    },
+
+    "fyi": {
+        word: "fyi",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=fyi&lang=en",
+            meanings: [
+                { definition: "Để bạn biết, thông tin thêm cho bạn (viết tắt của 'for your information', thường dùng trong email).", definition_lang: "vi", example: "FYI, tomorrow's meeting has been rescheduled to 2 PM.", pos: "Viết tắt / Khẩu ngữ", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌef.waɪˈaɪ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "để bạn biết" }],
+            relations: []
+        }]
+    },
+
+    "idk": {
+        word: "idk",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=idk&lang=en",
+            meanings: [
+                { definition: "Tôi không biết (viết tắt tin nhắn của 'I don't know').", definition_lang: "vi", example: "IDK what to wear to the party.", pos: "Viết tắt tin nhắn", sub_pos: null, source: "Custom", links: ["know"] }
+            ],
+            pronunciations: [{ ipa: "/ˌaɪ.diːˈkeɪ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "tôi không biết" }],
+            relations: []
+        }]
+    },
+
+    "imho": {
+        word: "imho",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=imho&lang=en",
+            meanings: [
+                { definition: "Theo ý kiến khiêm tốn của tôi (viết tắt của 'in my humble opinion').", definition_lang: "vi", example: "IMHO, the original version was much better.", pos: "Viết tắt tin nhắn", sub_pos: null, source: "Custom", links: ["opinion"] }
+            ],
+            pronunciations: [{ ipa: "/ˌɪm.hoʊ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "theo tôi thấy" }],
+            relations: []
+        }]
+    },
+
+    "omg": {
+        word: "omg",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=omg&lang=en",
+            meanings: [
+                { definition: "Ôi trời ơi! (thán từ viết tắt của 'oh my god' / 'oh my goodness', diễn tả sự ngạc nhiên, sửng sốt).", definition_lang: "vi", example: "OMG! You won the lottery!", pos: "Thán từ viết tắt", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌoʊ.emˈdʒiː/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "ôi trời ơi" }],
+            relations: []
+        }]
+    },
+
+    "afaik": {
+        word: "afaik",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=afaik&lang=en",
+            meanings: [
+                { definition: "Theo như tôi biết (viết tắt của 'as far as I know').", definition_lang: "vi", example: "AFAIK, the store is closed on Sundays.", pos: "Viết tắt tin nhắn", sub_pos: null, source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌeɪ.ef.eɪ.aɪˈkeɪ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "theo như tôi biết" }],
+            relations: []
+        }]
+    },
+
+    "gps": {
+        word: "gps",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=gps&lang=en",
+            meanings: [
+                { definition: "Hệ thống định vị toàn cầu (viết tắt của 'Global Positioning System', hệ thống định vị vệ tinh).", definition_lang: "vi", example: "My car's GPS navigation system guided us to the hotel.", pos: "Danh từ", sub_pos: "Công nghệ", source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌdʒiː.piːˈes/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "hệ thống định vị toàn cầu" }],
+            relations: []
+        }]
+    },
+
+    "lan": {
+        word: "lan",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=lan&lang=en",
+            meanings: [
+                { definition: "Mạng cục bộ (viết tắt của 'Local Area Network', mạng máy tính kết nối trong phạm vi nhỏ như nhà riêng, văn phòng).", definition_lang: "vi", example: "All office computers are connected via a high-speed LAN.", pos: "Danh từ", sub_pos: "Tin học / Mạng máy tính", source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/læn/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "mạng cục bộ" }],
+            relations: []
+        }]
+    },
+
+    "sdk": {
+        word: "sdk",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=sdk&lang=en",
+            meanings: [
+                { definition: "Bộ công cụ phát triển phần mềm (viết tắt của 'Software Development Kit', tập hợp các thư viện, tài liệu và công cụ để lập trình ứng dụng).", definition_lang: "vi", example: "Download the latest Android SDK for app development.", pos: "Danh từ", sub_pos: "Lập trình", source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌes.diːˈkeɪ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "bộ công cụ phát triển phần mềm" }],
+            relations: []
+        }]
+    },
+
+    "pda": {
+        word: "pda",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=pda&lang=en",
+            meanings: [
+                { definition: "Thiết bị kỹ thuật số cá nhân hỗ trợ (viết tắt của 'Personal Digital Assistant', thiết bị cầm tay tiền thân của smartphone).", definition_lang: "vi", example: "Early mobile professionals relied on Palm PDAs.", pos: "Danh từ", sub_pos: "Công nghệ", source: "Custom", links: [] },
+                { definition: "Sự thể hiện tình cảm công khai nơi công cộng (viết tắt của 'Public Display of Affection').", definition_lang: "vi", example: "They avoided PDA in conservative areas.", pos: "Danh từ", sub_pos: "Xã hội", source: "Custom", links: [] }
+            ],
+            pronunciations: [{ ipa: "/ˌpiː.diːˈeɪ/", region: "UK/US" }],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "thiết bị kỹ thuật số cá nhân" }],
+            relations: []
+        }]
     }
 };
 

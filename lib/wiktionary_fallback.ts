@@ -5,7 +5,89 @@ const WIKTIONARY_CACHE = new Map<string, MultiLookupResult>();
 const MAX_CACHE_SIZE = 1000;
 
 function stripHtml(html: string): string {
-    return html.replace(/<[^>]+>/g, '').trim();
+    return html
+        .replace(/&amp;/g, '&')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+}
+
+/**
+ * Bộ dịch đa tầng tự động (Multi-tier Translation Engine)
+ * Tầng 1: Google GTX API
+ * Tầng 2: Google Mobile Web Mirror (không bị rate limit 429)
+ * Tầng 3: MyMemory Translation API
+ */
+async function translateToVietnamese(text: string, signal?: AbortSignal): Promise<string> {
+    const cleanText = text.trim();
+    if (!cleanText) return '';
+
+    // Tầng 1: Google GTX
+    try {
+        const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&dt=bd&q=${encodeURIComponent(cleanText)}`;
+        const res = await fetch(gtxUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            signal
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data[0] && data[0][0] && data[0][0][0]) {
+                const trans = String(data[0][0][0]).trim();
+                if (trans && trans.toLowerCase() !== cleanText.toLowerCase()) {
+                    return trans;
+                }
+            }
+        }
+    } catch {
+        // Tiếp tục thử Tầng 2
+    }
+
+    // Tầng 2: Google Mobile Web Mirror (cực kỳ ổn định, không chặn 429)
+    try {
+        const mUrl = `https://translate.google.com/m?sl=auto&tl=vi&q=${encodeURIComponent(cleanText)}`;
+        const res = await fetch(mUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)' },
+            signal
+        });
+        if (res.ok) {
+            const html = await res.text();
+            const match = html.match(/class="result-container">([^<]+)<\/div>/);
+            if (match && match[1]) {
+                const trans = stripHtml(match[1]);
+                if (trans && trans.toLowerCase() !== cleanText.toLowerCase()) {
+                    return trans;
+                }
+            }
+        }
+    } catch {
+        // Tiếp tục thử Tầng 3
+    }
+
+    // Tầng 3: MyMemory Translation API
+    try {
+        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=en|vi`;
+        const res = await fetch(mmUrl, {
+            headers: { 'User-Agent': 'DictionaryApp/1.0' },
+            signal
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.responseData && data.responseData.translatedText) {
+                const trans = String(data.responseData.translatedText).trim();
+                if (trans && trans.toLowerCase() !== cleanText.toLowerCase() && !trans.includes('MYMEMORY WARNING')) {
+                    return trans;
+                }
+            }
+        }
+    } catch {
+        // Hết các tầng
+    }
+
+    return '';
 }
 
 /**
@@ -29,7 +111,7 @@ export async function lookupWiktionaryFallback(query: string, preferredLang?: st
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), 4500);
 
         // 1. Lấy định nghĩa chi tiết từ Wiktionary REST API (thử chữ thường, nếu không có thử chữ gốc)
         const fetchWiktionary = async (term: string) => {
@@ -43,28 +125,24 @@ export async function lookupWiktionaryFallback(query: string, preferredLang?: st
         const wiktionaryPromise = fetchWiktionary(clean.toLowerCase()).then(async (data) => {
             if (data && Array.isArray(data.en) && data.en.length > 0) return data;
             if (clean !== clean.toLowerCase()) {
-                return fetchWiktionary(clean);
+                const originalData = await fetchWiktionary(clean);
+                if (originalData && Array.isArray(originalData.en) && originalData.en.length > 0) return originalData;
+            }
+            // Nếu là từ ghép có gạch nối như long-dormant, thử tìm dạng khoảng trắng
+            if (clean.includes('-')) {
+                const spaceForm = clean.replace(/-/g, ' ');
+                return fetchWiktionary(spaceForm);
             }
             return data;
         });
 
-        // 2. Lấy bản dịch tiếng Việt song song từ Google Translate
-        const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&dt=bd&q=${encodeURIComponent(clean)}`;
-        const gtxPromise = fetch(gtxUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-            signal: controller.signal
-        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        // 2. Lấy bản dịch tiếng Việt song song qua hệ thống dịch đa tầng
+        const translationPromise = translateToVietnamese(clean, controller.signal);
 
-        const [wiktionaryData, gtxData] = await Promise.all([wiktionaryPromise, gtxPromise]);
+        const [wiktionaryData, viTranslation] = await Promise.all([wiktionaryPromise, translationPromise]);
         clearTimeout(timeoutId);
 
         const meanings: DictionaryMeaning[] = [];
-
-        // Trích xuất bản dịch tiếng Việt từ Google
-        let viTranslation = '';
-        if (gtxData && gtxData[0] && gtxData[0][0] && gtxData[0][0][0]) {
-            viTranslation = gtxData[0][0][0];
-        }
 
         // Nếu Wiktionary có dữ liệu:
         if (wiktionaryData && Array.isArray(wiktionaryData.en) && wiktionaryData.en.length > 0) {
@@ -91,14 +169,19 @@ export async function lookupWiktionaryFallback(query: string, preferredLang?: st
 
         // Thêm nghĩa tiếng Việt nếu có
         if (viTranslation && viTranslation.toLowerCase() !== clean.toLowerCase()) {
+            const subLinks: string[] = [];
+            if (clean.includes('-')) {
+                subLinks.push(...clean.split('-').filter(part => part.length > 2));
+            }
+
             meanings.unshift({
                 pos: meanings.length > 0 ? meanings[0].pos : 'Từ vựng',
-                sub_pos: null,
+                sub_pos: clean.includes('-') ? 'Từ ghép (Compound)' : null,
                 definition: viTranslation,
                 definition_lang: 'vi',
                 example: null,
                 source: 'Từ điển dịch',
-                links: []
+                links: subLinks
             });
         }
 

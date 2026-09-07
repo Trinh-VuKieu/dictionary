@@ -199,6 +199,8 @@ export function getSpellingVariants(word: string): string[] {
 
     // Một số từ biến thể đặc biệt
     const SPECIAL_VARIANTS: Record<string, string> = {
+        'miniscule': 'minuscule',
+        'minuscule': 'miniscule',
         'grey': 'gray',
         'gray': 'grey',
         'programme': 'program',
@@ -210,7 +212,23 @@ export function getSpellingVariants(word: string): string[] {
         'aeroplane': 'airplane',
         'airplane': 'aeroplane',
         'aluminium': 'aluminum',
-        'aluminum': 'aluminium'
+        'aluminum': 'aluminium',
+        'acknowledgement': 'acknowledgment',
+        'acknowledgment': 'acknowledgement',
+        'judgement': 'judgment',
+        'judgment': 'judgement',
+        'cancelled': 'canceled',
+        'canceled': 'cancelled',
+        'travelling': 'traveling',
+        'traveling': 'travelling',
+        'flavour': 'flavor',
+        'flavor': 'flavour',
+        'favour': 'favor',
+        'favor': 'favour',
+        'neighbour': 'neighbor',
+        'neighbor': 'neighbour',
+        'colour': 'color',
+        'color': 'colour'
     };
     if (SPECIAL_VARIANTS[lower] && !variants.includes(SPECIAL_VARIANTS[lower])) {
         variants.push(SPECIAL_VARIANTS[lower]);

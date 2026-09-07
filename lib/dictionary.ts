@@ -299,7 +299,10 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
         source: string | null;
     }[];
 
-    const updatedMeanings: DictionaryMeaning[] = meanings.map((meaning) => {
+    // Lọc bỏ các định nghĩa rác, rỗng hoặc chỉ có dấu chấm đơn '.'
+    const validMeanings = meanings.filter(m => m.definition && m.definition.trim() !== '.' && m.definition.trim() !== '');
+
+    const updatedMeanings: DictionaryMeaning[] = validMeanings.map((meaning) => {
         let links: string[] = [];
         if (meaning.links) {
             try {
@@ -376,9 +379,16 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
         return { exists: false, word: normalized, results: [] };
     }
 
-    const results: LanguageResult[] = wordRows.map(row =>
+    const rawResults: LanguageResult[] = wordRows.map(row =>
         getWordData(row.id, row.word, row.lang_code)
     );
+
+    // Chỉ giữ lại những ngôn ngữ có ít nhất 1 định nghĩa hoặc bản dịch hợp lệ
+    const results = rawResults.filter(r => r.meanings.length > 0 || r.translations.length > 0);
+
+    if (results.length === 0) {
+        return { exists: false, word: normalized, results: [] };
+    }
 
     return {
         exists: true,
@@ -589,12 +599,49 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     // 2. Tra cứu trực tiếp từ SQLite Database
     const dbResult = lookupDirectFromDb(cleanWord, lang);
     if (dbResult.exists) {
-        const enrichedResults = dbResult.results.map(r => {
+        let enrichedResults = dbResult.results.map(r => {
             if (r.lang_code === 'en' || !lang) {
                 return enrichEnglishResultWithLemmas(cleanWord, r);
             }
             return r;
         });
+
+        // Xử lý hiện tượng ngôn ngữ lạ che lấp tiếng Anh (ví dụ: made ra Dungan, came/best ra Pháp/Na Uy...)
+        const isLatin = /^[a-zA-Z\-']+$/.test(cleanWord);
+        const hasEn = enrichedResults.some(r => r.lang_code === 'en' && r.meanings.length > 0);
+        if (isLatin && !hasEn && !lang) {
+            const lemmas = getLemmas(cleanWord);
+            for (const item of lemmas) {
+                if (item.lemma.toLowerCase() === cleanWord.toLowerCase()) continue;
+                const baseResult = lookupDirectFromDb(item.lemma, 'en');
+                if (baseResult.exists && baseResult.results.length > 0) {
+                    const baseEn = baseResult.results.find(r => r.lang_code === 'en');
+                    if (baseEn && baseEn.meanings.length > 0) {
+                        const noteMeaning: DictionaryMeaning = {
+                            definition: `${item.explanation} Hiển thị nghĩa của từ gốc "${item.lemma}":`,
+                            definition_lang: 'vi',
+                            example: null,
+                            pos: 'Dạng biến thể',
+                            sub_pos: item.posType === 'noun' ? 'Số nhiều' : item.posType === 'verb' ? 'Chia thì' : 'So sánh',
+                            source: 'Lemmatizer NLP',
+                            links: [item.lemma]
+                        };
+                        const lemmaEnResult: LanguageResult = {
+                            ...baseEn,
+                            audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=en`,
+                            meanings: [noteMeaning, ...baseEn.meanings],
+                            relations: [
+                                { related_word: item.lemma, relation_type: 'Gốc từ' },
+                                ...baseEn.relations
+                            ]
+                        };
+                        enrichedResults = [lemmaEnResult, ...enrichedResults];
+                        break;
+                    }
+                }
+            }
+        }
+
         return {
             ...dbResult,
             results: enrichedResults
@@ -906,27 +953,46 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
 export async function lookupWord(word: string, lang?: string): Promise<MultiLookupResult> {
     const syncResult = lookupWordSync(word, lang);
     if (syncResult.exists) {
+        // Nếu kết quả đồng bộ chưa có tiếng Anh cho từ Latinh (ví dụ problem, single, district chỉ có no/fr trong SQLite)
+        const isLatin = /^[a-zA-Z\-']+$/.test(word.trim());
+        const hasEn = syncResult.results.some(r => r.lang_code === 'en' && r.meanings.length > 0);
+        if (isLatin && !hasEn && (!lang || lang === 'en')) {
+            try {
+                const wiktionaryRes = await lookupWiktionaryFallback(word, 'en');
+                if (wiktionaryRes && wiktionaryRes.exists && wiktionaryRes.results.length > 0) {
+                    const enLangResult = wiktionaryRes.results.find(r => r.lang_code === 'en');
+                    if (enLangResult && enLangResult.meanings.length > 0) {
+                        return {
+                            ...syncResult,
+                            results: [enLangResult, ...syncResult.results]
+                        };
+                    }
+                }
+            } catch (e) {
+                console.error('Wiktionary enrichment error:', e);
+            }
+        }
         return syncResult;
     }
 
-    // 1. Nếu hệ thống offline chưa có, tự động tra cứu Bách khoa toàn thư Wikipedia (địa danh, tên riêng, văn hóa)
-    try {
-        const wikiResult = await lookupWikiFallback(word, lang);
-        if (wikiResult && wikiResult.exists) {
-            return wikiResult;
-        }
-    } catch (e) {
-        console.error('Wikipedia fallback error:', e);
-    }
-
-    // 2. Tra cứu Wiktionary & Từ điển Mở cho từ chuyên ngành, từ y khoa/khoa học cực hiếm, biến thể ngữ pháp hiếm
+    // 1. Tra cứu Wiktionary & Từ điển Mở trước (từ điển ngôn ngữ, từ loại Noun/Verb/Adj/Adv, từ ghép, bản dịch...)
     try {
         const wiktionaryResult = await lookupWiktionaryFallback(word, lang);
-        if (wiktionaryResult && wiktionaryResult.exists) {
+        if (wiktionaryResult && wiktionaryResult.exists && wiktionaryResult.results.length > 0) {
             return wiktionaryResult;
         }
     } catch (e) {
         console.error('Wiktionary fallback error:', e);
+    }
+
+    // 2. Nếu từ điển chưa có, tra cứu Bách khoa toàn thư Wikipedia (địa danh, tên riêng, thực thể văn hóa/khoa học)
+    try {
+        const wikiResult = await lookupWikiFallback(word, lang);
+        if (wikiResult && wikiResult.exists && wikiResult.results.length > 0) {
+            return wikiResult;
+        }
+    } catch (e) {
+        console.error('Wikipedia fallback error:', e);
     }
 
     return syncResult;

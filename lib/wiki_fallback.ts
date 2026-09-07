@@ -96,10 +96,25 @@ export async function lookupWikiFallback(query: string, preferredLang?: string):
                         continue;
                     }
 
+                    // Bỏ qua các chuyển hướng (redirect) chiếm đoạt sang tiêu đề hoàn toàn khác biệt
+                    // (Ví dụ điển hình: người dùng tra "miniscule", Wikipedia tự redirect sang "Letter case")
+                    const queryNorm = clean.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const titleNorm = (data.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (queryNorm.length >= 3 && titleNorm.length >= 3) {
+                        const isMatch = queryNorm === titleNorm || queryNorm.includes(titleNorm) || titleNorm.includes(queryNorm);
+                        if (!isMatch) {
+                            continue;
+                        }
+                    }
+
                     if (data.extract && data.extract.length > 10) {
                         const langName = lang === 'vi' ? 'Tiếng Việt' : 'Tiếng Anh';
                         const sourceUrl = data.content_urls?.desktop?.page;
                         const audioWord = clean === clean.toLowerCase() ? clean : (data.title || clean);
+
+                        // Chỉ gán 'Danh từ riêng' nếu từ được viết hoa (như địa danh Hà Nội, nhân vật Einstein)
+                        const isProperNoun = /^[A-ZÀ-Ỹ]/.test(clean);
+                        const pos = isProperNoun ? 'Danh từ riêng' : 'Thuật ngữ / Bách khoa';
 
                         const languageResult: LanguageResult = {
                             lang_code: lang,
@@ -110,7 +125,7 @@ export async function lookupWikiFallback(query: string, preferredLang?: string):
                                     definition: data.extract,
                                     definition_lang: lang,
                                     example: data.description ? `📌 ${data.description}` : null,
-                                    pos: 'Danh từ riêng',
+                                    pos,
                                     sub_pos: data.description || 'Thực thể bách khoa Wikipedia',
                                     source: 'Bách khoa toàn thư Wikipedia',
                                     links: sourceUrl ? [sourceUrl] : []
@@ -121,9 +136,11 @@ export async function lookupWikiFallback(query: string, preferredLang?: string):
                             relations: []
                         };
 
+                        const returnWord = clean.toLowerCase() === (data.title || '').toLowerCase() ? clean : (data.title || clean);
+
                         const lookupResult: MultiLookupResult = {
                             exists: true,
-                            word: data.title || clean,
+                            word: returnWord,
                             results: [languageResult]
                         };
 

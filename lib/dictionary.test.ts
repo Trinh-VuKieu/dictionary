@@ -683,5 +683,85 @@ describe('Dictionary Module', () => {
             const res = await lookupWikiFallback('AM');
             expect(res).toBeNull();
         });
+
+        it('should correctly resolve "new" with rich meanings and IPA instead of 0 definitions', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const result = await lookupWord('new');
+            expect(result.exists).toBe(true);
+            expect(result.word).toBe('new');
+            const enRes = result.results.find(r => r.lang_code === 'en');
+            expect(enRes).toBeDefined();
+            expect(enRes!.meanings.length).toBeGreaterThanOrEqual(4);
+            expect(enRes!.meanings[0].definition).toContain('Mới, mới mẻ');
+            expect(enRes!.pronunciations.length).toBeGreaterThanOrEqual(2);
+            expect(enRes!.translations[0].translation).toContain('mới');
+        });
+
+        it('should resolve "miniscule" to diminutive meaning and NEVER to "Letter case"', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const result = await lookupWord('miniscule');
+            expect(result.exists).toBe(true);
+            expect(result.word).toBe('miniscule');
+            const enRes = result.results.find(r => r.lang_code === 'en');
+            expect(enRes).toBeDefined();
+            const allDefs = enRes!.meanings.map(m => m.definition).join(' ');
+            expect(allDefs).not.toContain('Letter case is the distinction');
+            expect(allDefs).toContain('minuscule');
+        });
+
+        it('should resolve "mindset" and "mindsets" without hardcoded "Danh từ riêng"', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const result = await lookupWord('mindset');
+            expect(result.exists).toBe(true);
+            expect(result.word).toBe('mindset');
+            const enRes = result.results.find(r => r.lang_code === 'en');
+            expect(enRes).toBeDefined();
+            expect(enRes!.meanings[0].pos).not.toBe('Danh từ riêng');
+            expect(enRes!.meanings[0].definition).toContain('Tư duy');
+
+            const pluralRes = await lookupWord('mindsets');
+            expect(pluralRes.exists).toBe(true);
+            const pluralEn = pluralRes.results.find(r => r.lang_code === 'en');
+            expect(pluralEn).toBeDefined();
+            expect(pluralEn!.meanings[0].pos).not.toBe('Danh từ riêng');
+        });
+
+        it('should reliably translate compound word "long-dormant" without 429 errors', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const result = await lookupWord('long-dormant');
+            expect(result.exists).toBe(true);
+            expect(result.word).toBe('long-dormant');
+            const enRes = result.results.find(r => r.lang_code === 'en');
+            expect(enRes).toBeDefined();
+            expect(enRes!.meanings.length).toBeGreaterThan(0);
+            expect(enRes!.meanings[0].definition).toContain('không hoạt động lâu dài');
+        });
+
+        it('should ensure English is returned first for shadowed words like "made", "problem", "best"', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const resMade = await lookupWord('made');
+            expect(resMade.exists).toBe(true);
+            expect(resMade.results[0].lang_code).toBe('en');
+            expect(resMade.results[0].meanings.length).toBeGreaterThan(5);
+
+            const resProblem = await lookupWord('problem');
+            expect(resProblem.exists).toBe(true);
+            expect(resProblem.results[0].lang_code).toBe('en');
+            expect(resProblem.results[0].meanings[0].definition).toContain('Vấn đề');
+
+            const resBest = await lookupWord('best');
+            expect(resBest.exists).toBe(true);
+            expect(resBest.results[0].lang_code).toBe('en');
+        });
+
+        it('should never contain definitions that are merely a single dot "."', async () => {
+            const { lookupWordSync } = await import('./dictionary');
+            const wordsToCheck = ['of', 'give', 'given', 'nice', 'fish', 'gives', 'fishing', 'gave', 'bought', 'dan'];
+            for (const w of wordsToCheck) {
+                const res = lookupWordSync(w);
+                const allDefs = res.results.flatMap(r => r.meanings.map(m => m.definition));
+                expect(allDefs.some(d => d.trim() === '.')).toBe(false);
+            }
+        });
     })
 })
