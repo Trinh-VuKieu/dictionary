@@ -23,7 +23,18 @@ const CACHE_HEADERS = {
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
-        const word = searchParams.get('word');
+        let word = searchParams.get('word');
+        if (word) {
+            while (word.includes('%25') || word.includes('%27') || word.includes('%20')) {
+                try {
+                    const decoded = decodeURIComponent(word);
+                    if (decoded === word) break;
+                    word = decoded;
+                } catch {
+                    break;
+                }
+            }
+        }
         const lang = searchParams.get('lang') || undefined;
         const defLang = searchParams.get('def_lang') || undefined;
 

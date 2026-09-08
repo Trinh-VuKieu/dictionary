@@ -608,6 +608,33 @@ describe('Dictionary Module', () => {
             expect(res2.headers.get('Content-Type')).toBe('audio/mpeg');
         });
 
+        it('should pronounce English word "momentum" in English, not Vietnamese', async () => {
+            const { GET, DELETE } = await import('../app/api/v1/tts/route');
+            // Clear any potential cache first
+            await DELETE(new Request('http://localhost:3000/api/v1/tts?word=momentum&lang=en', { method: 'DELETE' }));
+
+            const req = new Request('http://localhost:3000/api/v1/tts?word=momentum&lang=en');
+            const res = await GET(req);
+            expect(res.status).toBe(200);
+            expect(res.headers.get('Content-Type')).toBe('audio/mpeg');
+            const buf = await res.arrayBuffer();
+            // Google TTS returns 8640 bytes for momentum in English, 9600 bytes in Vietnamese
+            expect(buf.byteLength).toBe(8640);
+        });
+
+        it('should support cache reload with ?reload=1 and DELETE method', async () => {
+            const { GET, DELETE, AUDIO_CACHE } = await import('../app/api/v1/tts/route');
+            const req = new Request('http://localhost:3000/api/v1/tts?word=momentum&lang=en&reload=1');
+            const res = await GET(req);
+            expect(res.status).toBe(200);
+            expect(AUDIO_CACHE.has('momentum:en')).toBe(true);
+
+            const delReq = new Request('http://localhost:3000/api/v1/tts?word=momentum&lang=en', { method: 'DELETE' });
+            const delRes = await DELETE(delReq);
+            expect(delRes.status).toBe(200);
+            expect(AUDIO_CACHE.has('momentum:en')).toBe(false);
+        });
+
         it('should resolve rare medical / technical English words via Wiktionary fallback', async () => {
             const { lookupWord } = await import('./dictionary');
             const result = await lookupWord('thyroparathyroidectomized');
