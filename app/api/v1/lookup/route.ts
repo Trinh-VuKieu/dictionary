@@ -11,6 +11,16 @@ const CACHE_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            ...CACHE_HEADERS,
+            'Access-Control-Max-Age': '86400',
+        },
+    });
+}
+
 /**
  * Multi-language dictionary lookup API
  * 
@@ -45,7 +55,7 @@ export async function GET(req: Request) {
         console.log(logParts.join(' '));
 
         if (!word) {
-            return NextResponse.json({ error: 'Missing "word" parameter' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing "word" parameter' }, { status: 400, headers: CACHE_HEADERS });
         }
 
         const result = await lookupWord(word, lang);

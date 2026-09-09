@@ -11,6 +11,16 @@ const CACHE_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            ...CACHE_HEADERS,
+            'Access-Control-Max-Age': '86400',
+        },
+    });
+}
+
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q');
