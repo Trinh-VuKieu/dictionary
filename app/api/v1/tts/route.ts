@@ -3,9 +3,10 @@ import { NextResponse } from 'next/server';
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD, DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type, Range, User-Agent, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Range, User-Agent, X-Requested-With, Accept, Cache-Control, If-None-Match, If-Modified-Since',
     'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
     'Accept-Ranges': 'bytes',
+    'Vary': 'Origin',
 };
 
 // In-memory audio buffer cache (stores up to 500 audio files in memory)
@@ -121,6 +122,7 @@ export async function GET(req: Request) {
         return new NextResponse(cachedBuffer, {
             headers: {
                 'Content-Type': 'audio/mpeg',
+                'Content-Length': String(cachedBuffer.byteLength),
                 'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
                 ...CORS_HEADERS,
             },
@@ -164,6 +166,7 @@ export async function GET(req: Request) {
                         return new NextResponse(audioBuffer, {
                             headers: {
                                 'Content-Type': 'audio/mpeg',
+                                'Content-Length': String(audioBuffer.byteLength),
                                 'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
                                 ...CORS_HEADERS,
                             },

@@ -7,8 +7,9 @@ const CACHE_HEADERS = {
     'CDN-Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=31536000',
     'Vercel-CDN-Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=31536000',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Range, User-Agent, X-Requested-With, Accept, Cache-Control, If-None-Match, If-Modified-Since',
+    'Vary': 'Origin',
 };
 
 export async function OPTIONS() {
@@ -17,8 +18,13 @@ export async function OPTIONS() {
         headers: {
             ...CACHE_HEADERS,
             'Access-Control-Max-Age': '86400',
+            'Content-Length': '0',
         },
     });
+}
+
+export async function HEAD(req: Request) {
+    return GET(req);
 }
 
 /**

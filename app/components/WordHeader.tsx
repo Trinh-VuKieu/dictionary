@@ -12,6 +12,7 @@ export default function WordHeader({ word, audio }: WordHeaderProps) {
             trackTTSPlay(word);
 
             const player = new Audio(audio);
+            player.crossOrigin = 'anonymous';
             player.play().catch(e => console.error('Audio play error:', e));
         }
     };

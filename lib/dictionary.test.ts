@@ -550,6 +550,22 @@ describe('Dictionary Module', () => {
     })
 
     describe('TTS & Audio CORS endpoint', () => {
+        it('should handle OPTIONS preflight with full CORS headers in middleware', async () => {
+            const { middleware, config } = await import('../middleware');
+            const { NextRequest } = await import('next/server');
+            expect(config.matcher).toContain('/api/:path*');
+            expect(config.matcher).toContain('/translate_tts');
+
+            const req = new NextRequest('http://localhost:3000/api/v1/tts?word=test', { method: 'OPTIONS' });
+            const res = middleware(req);
+            expect(res.status).toBe(204);
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+            expect(res.headers.get('Access-Control-Allow-Methods')).toContain('GET');
+            expect(res.headers.get('Access-Control-Allow-Methods')).toContain('DELETE');
+            expect(res.headers.get('Vary')).toBe('Origin');
+            expect(res.headers.get('Content-Length')).toBe('0');
+        });
+
         it('should respond to OPTIONS with CORS headers', async () => {
             const { OPTIONS } = await import('../app/api/v1/tts/route');
             const res = await OPTIONS();
@@ -557,6 +573,7 @@ describe('Dictionary Module', () => {
             expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
             expect(res.headers.get('Access-Control-Allow-Methods')).toContain('GET');
             expect(res.headers.get('Access-Control-Allow-Methods')).toContain('OPTIONS');
+            expect(res.headers.get('Vary')).toBe('Origin');
         });
 
         it('should return relative audio URL in lookup response for backend client composition', async () => {

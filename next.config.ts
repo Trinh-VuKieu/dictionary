@@ -29,18 +29,20 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS, HEAD' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Range, User-Agent, Authorization' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS, HEAD' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Range, User-Agent, X-Requested-With, Accept, Cache-Control, If-None-Match, If-Modified-Since' },
           { key: 'Access-Control-Expose-Headers', value: 'Content-Length, Content-Range, Accept-Ranges' },
+          { key: 'Vary', value: 'Origin' },
         ],
       },
       {
         source: '/translate_tts',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS, HEAD' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Range, User-Agent, Authorization' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS, HEAD' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Range, User-Agent, X-Requested-With, Accept, Cache-Control, If-None-Match, If-Modified-Since' },
           { key: 'Access-Control-Expose-Headers', value: 'Content-Length, Content-Range, Accept-Ranges' },
+          { key: 'Vary', value: 'Origin' },
         ],
       },
     ];
