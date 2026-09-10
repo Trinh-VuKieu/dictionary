@@ -87,6 +87,8 @@ import { lookupWiktionaryFallback } from './wiktionary_fallback';
 import { getEnglishPhoneticFallback } from './english_phonetics';
 import { getSynonymsAndAntonyms, getThesaurusEntry } from './synonyms_antonyms';
 
+// Guard chống vòng lặp vô hạn khi tra cứu biến thể chính tả 2 chiều (color↔colour, grey↔gray...)
+const _spellingLookupGuard = new Set<string>();
 
 
 
@@ -1525,13 +1527,27 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
         }
     }
 
-    // 3.2. Tra cứu biến thể chính tả Anh - Mỹ và từ ghép gạch nối (color <-> colour, well-known <-> well known)
-    const spellingVariants = getSpellingVariants(cleanWord);
-    for (const variant of spellingVariants) {
-        if (variant.toLowerCase() === cleanWord.toLowerCase()) continue;
-        const variantResult = lookupDirectFromDb(variant, lang || 'en');
-        if (variantResult.exists && variantResult.results.length > 0) {
-            return normalizeResultPronunciations(variantResult);
+    // 3.2. Tra cứu biến thể chính tả Anh - Mỹ, từ ghép gạch nối, và sửa lỗi chính tả phổ biến
+    // (color <-> colour, well-known <-> well known, bougth -> bought -> buy)
+    // Guard chống vòng lặp vô hạn cho các cặp biến thể 2 chiều (color↔colour, miniscule↔minuscule)
+    if (!_spellingLookupGuard.has(cleanWord.toLowerCase())) {
+        _spellingLookupGuard.add(cleanWord.toLowerCase());
+        try {
+            const spellingVariants = getSpellingVariants(cleanWord);
+            for (const variant of spellingVariants) {
+                if (variant.toLowerCase() === cleanWord.toLowerCase()) continue;
+                // Dùng lookupWordSync thay vì lookupDirectFromDb để variant đi qua TOÀN BỘ pipeline:
+                // bougth → bought (spelling fix) → buy (lemma resolution) → đầy đủ rootWord, phonetics, meanings
+                const variantResult = lookupWordSync(variant, lang);
+                if (variantResult.exists && variantResult.results.length > 0) {
+                    return normalizeResultPronunciations({
+                        ...variantResult,
+                        word: cleanWord, // Giữ nguyên từ gốc user nhập
+                    });
+                }
+            }
+        } finally {
+            _spellingLookupGuard.delete(cleanWord.toLowerCase());
         }
     }
 

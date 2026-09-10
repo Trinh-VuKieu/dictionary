@@ -308,6 +308,194 @@ export function getSpellingVariants(word: string): string[] {
         variants.push(SPECIAL_VARIANTS[lower]);
     }
 
+    // 3. Sửa lỗi chính tả phổ biến: đảo -gth → -ght (bougth → bought, thougth → thought, brougth → brought...)
+    // Đây là lỗi đánh máy CỰC KỲ phổ biến trong tiếng Anh vì các từ kết thúc bằng -ght rất nhiều
+    if (lower.includes('gth')) {
+        const fixed = lower.replace(/gth/g, 'ght');
+        if (fixed !== lower && !variants.includes(fixed)) {
+            variants.push(fixed);
+        }
+    }
+    // Ngược lại: nếu ai gõ -hgt thay vì -ght
+    if (lower.includes('hgt')) {
+        const fixed = lower.replace(/hgt/g, 'ght');
+        if (fixed !== lower && !variants.includes(fixed)) {
+            variants.push(fixed);
+        }
+    }
+    // Ngược lại: nếu ai gõ -gth thay vì -ght ở giữa từ (ligthning → lightning)
+    if (lower.includes('gth') && !lower.endsWith('gth')) {
+        const fixed = lower.replace(/gth/g, 'ght');
+        if (fixed !== lower && !variants.includes(fixed)) {
+            variants.push(fixed);
+        }
+    }
+
+    // 4. Bảng sửa lỗi chính tả phổ biến nhất (Common Misspellings)
+    const COMMON_TYPOS: Record<string, string> = {
+        // Lỗi đảo -gth → -ght (phổ biến nhất)
+        'bougth': 'bought',
+        'thougth': 'thought',
+        'brougth': 'brought',
+        'caugth': 'caught',
+        'taugth': 'taught',
+        'fougth': 'fought',
+        'sougth': 'sought',
+        'wrougth': 'wrought',
+        'ougth': 'ought',
+        'daugther': 'daughter',
+        'slaugther': 'slaughter',
+        'laugther': 'laughter',
+        'ligth': 'light',
+        'nigth': 'night',
+        'rigth': 'right',
+        'figth': 'fight',
+        'migth': 'might',
+        'sigth': 'sight',
+        'heigth': 'height',
+        'weigth': 'weight',
+        'eigth': 'eight',
+        'straigth': 'straight',
+        'fligth': 'flight',
+        'brigth': 'bright',
+        'sligth': 'slight',
+        'knigth': 'knight',
+        'tougth': 'tough',
+        'enougth': 'enough',
+        'througth': 'through',
+        'thougthful': 'thoughtful',
+        'strenght': 'strength',
+        'lenght': 'length',
+        'deligth': 'delight',
+        'pligth': 'plight',
+        'bligth': 'blight',
+        'frigth': 'fright',
+        'overwelgth': 'overwrought',
+        'tighten': 'tighten',
+        'higthly': 'highly',
+        // Lỗi gấp đôi / thiếu chữ cái phổ biến
+        'recieve': 'receive',
+        'beleive': 'believe',
+        'acheive': 'achieve',
+        'wierd': 'weird',
+        'freind': 'friend',
+        'foriegn': 'foreign',
+        'neccessary': 'necessary',
+        'necesary': 'necessary',
+        'occured': 'occurred',
+        'occurence': 'occurrence',
+        'seperate': 'separate',
+        'definately': 'definitely',
+        'definitly': 'definitely',
+        'goverment': 'government',
+        'enviroment': 'environment',
+        'independant': 'independent',
+        'accomodate': 'accommodate',
+        'acommodate': 'accommodate',
+        'embarass': 'embarrass',
+        'embarras': 'embarrass',
+        'occassion': 'occasion',
+        'occurr': 'occur',
+        'tommorow': 'tomorrow',
+        'tommorrow': 'tomorrow',
+        'tomorow': 'tomorrow',
+        'calender': 'calendar',
+        'begining': 'beginning',
+        'comming': 'coming',
+        'writting': 'writing',
+        'untill': 'until',
+        'succesful': 'successful',
+        'succesfull': 'successful',
+        'successfull': 'successful',
+        'beautifull': 'beautiful',
+        'wonderfull': 'wonderful',
+        'carefull': 'careful',
+        'peacefull': 'peaceful',
+        'powerfull': 'powerful',
+        'skillfull': 'skillful',
+        'gratefull': 'grateful',
+        'hopefull': 'hopeful',
+        'painfull': 'painful',
+        'playfull': 'playful',
+        'thankfull': 'thankful',
+        'usefull': 'useful',
+        'harmfull': 'harmful',
+        'carefullly': 'carefully',
+        'diffrent': 'different',
+        'diferent': 'different',
+        'realy': 'really',
+        'finaly': 'finally',
+        'basicaly': 'basically',
+        'especialy': 'especially',
+        'naturaly': 'naturally',
+        'originaly': 'originally',
+        'profesional': 'professional',
+        'proffesional': 'professional',
+        'exersise': 'exercise',
+        'excersise': 'exercise',
+        'exercize': 'exercise',
+        'knowlege': 'knowledge',
+        'knowlegde': 'knowledge',
+        'languege': 'language',
+        'langauge': 'language',
+        'arguement': 'argument',
+        'grammer': 'grammar',
+        'pronounciation': 'pronunciation',
+        'prononciation': 'pronunciation',
+        'adress': 'address',
+        'recomend': 'recommend',
+        'recommand': 'recommend',
+        'developement': 'development',
+        'govermnent': 'government',
+        'restarant': 'restaurant',
+        'resturant': 'restaurant',
+        'resterant': 'restaurant',
+        'intresting': 'interesting',
+        'explaination': 'explanation',
+        'comparsion': 'comparison',
+        'posession': 'possession',
+        'concious': 'conscious',
+        'convienent': 'convenient',
+        'existance': 'existence',
+        'experiance': 'experience',
+        'gauruntee': 'guarantee',
+        'guarentee': 'guarantee',
+        'imediately': 'immediately',
+        'immediatly': 'immediately',
+        'intellegent': 'intelligent',
+        'liason': 'liaison',
+        'maintainance': 'maintenance',
+        'millenium': 'millennium',
+        'mispell': 'misspell',
+        'noticable': 'noticeable',
+        'persistant': 'persistent',
+        'personell': 'personnel',
+        'posession': 'possession',
+        'privelege': 'privilege',
+        'priviledge': 'privilege',
+        'publically': 'publicly',
+        'questionaire': 'questionnaire',
+        'refrence': 'reference',
+        'relevent': 'relevant',
+        'relavant': 'relevant',
+        'rythm': 'rhythm',
+        'rythem': 'rhythm',
+        'sincerly': 'sincerely',
+        'succede': 'succeed',
+        'suprise': 'surprise',
+        'surprize': 'surprise',
+        'truely': 'truly',
+        'tyrany': 'tyranny',
+        'underate': 'underrate',
+        'vegatable': 'vegetable',
+        'vegtable': 'vegetable',
+        'wether': 'whether',
+        'wich': 'which',
+    };
+    if (COMMON_TYPOS[lower] && !variants.includes(COMMON_TYPOS[lower])) {
+        variants.push(COMMON_TYPOS[lower]);
+    }
+
     return variants;
 }
 

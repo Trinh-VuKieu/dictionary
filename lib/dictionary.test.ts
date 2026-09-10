@@ -790,12 +790,43 @@ describe('Dictionary Module', () => {
             const { lookupWord } = await import('./dictionary');
             const result = await lookupWord('miniscule');
             expect(result.exists).toBe(true);
-            expect(result.word).toBe('minuscule');
+            expect(result.word).toBe('miniscule');
             const enRes = result.results.find(r => r.lang_code === 'en');
             expect(enRes).toBeDefined();
             const allDefs = enRes!.meanings.map(m => m.definition).join(' ');
             expect(allDefs).not.toContain('Letter case is the distinction');
             expect(allDefs).toMatch(/nhỏ xíu/i);
+        });
+
+        it('should auto-correct common typos: bougth→bought (rootWord: buy), thougth→thought (rootWord: think)', async () => {
+            const { lookupWordSync } = await import('./dictionary');
+
+            // bougth → bought → rootWord: buy
+            const bougth = lookupWordSync('bougth');
+            expect(bougth.exists).toBe(true);
+            expect(bougth.word).toBe('bougth');
+            expect(bougth.rootWord).toBe('buy');
+            const bougthEn = bougth.results.find(r => r.lang_code === 'en');
+            expect(bougthEn).toBeDefined();
+            expect(bougthEn!.meanings.some(m => /mua/i.test(m.definition))).toBe(true);
+            // Phiên âm phải là của bought, không phải bougth
+            expect(bougth.phonetics?.some(p => p.ipa?.includes('bɔ'))).toBe(true);
+
+            // thougth → thought → rootWord: think
+            const thougth = lookupWordSync('thougth');
+            expect(thougth.exists).toBe(true);
+            expect(thougth.word).toBe('thougth');
+            expect(thougth.rootWord).toBe('think');
+
+            // brougth → brought → rootWord: bring
+            const brougth = lookupWordSync('brougth');
+            expect(brougth.exists).toBe(true);
+            expect(brougth.rootWord).toBe('bring');
+
+            // caugth → caught → rootWord: catch
+            const caugth = lookupWordSync('caugth');
+            expect(caugth.exists).toBe(true);
+            expect(caugth.rootWord).toBe('catch');
         });
 
         it('should resolve "mindset" and "mindsets" without hardcoded "Danh từ riêng"', async () => {
