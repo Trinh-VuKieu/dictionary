@@ -3,13 +3,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: dictionary_app
+    container_name: dictionary-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    networks:
+      - app-net
+    expose:
+      - "3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
     # Tùy chọn: mount database từ ngoài host nếu muốn cập nhật db mà không cần build lại image
     # volumes:
     #   - ./lib/dictionary.db:/app/lib/dictionary.db:ro
+
+networks:
+  app-net:
+    name: be-edu-app_app-net
+    external: true
+
