@@ -470,7 +470,6 @@ export function getSpellingVariants(word: string): string[] {
         'noticable': 'noticeable',
         'persistant': 'persistent',
         'personell': 'personnel',
-        'posession': 'possession',
         'privelege': 'privilege',
         'priviledge': 'privilege',
         'publically': 'publicly',
