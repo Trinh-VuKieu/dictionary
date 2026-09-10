@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: dictionary-app
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     networks:
       - app-net
     expose:
