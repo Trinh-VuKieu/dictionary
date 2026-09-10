@@ -84,7 +84,7 @@ import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
 import { VN_UNACCENTED_PLACES, getPlaceOrName, getPlacesSuggestions } from './places_and_names';
 import { lookupWikiFallback } from './wiki_fallback';
 import { lookupWiktionaryFallback } from './wiktionary_fallback';
-import { getEnglishPhoneticFallback, deriveInflectedIpa, generateEnglishIpa } from './english_phonetics';
+import { getEnglishPhoneticFallback, deriveInflectedIpa, generateEnglishIpa, fetchOnlineEnglishPhonetics } from './english_phonetics';
 import { getSynonymsAndAntonyms, getThesaurusEntry } from './synonyms_antonyms';
 
 // Guard chống vòng lặp vô hạn khi tra cứu biến thể chính tả 2 chiều (color↔colour, grey↔gray...)
@@ -1819,6 +1819,8 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
  */
 export async function lookupWord(word: string, lang?: string): Promise<MultiLookupResult> {
     const syncResult = lookupWordSync(word, lang);
+    let finalResult = syncResult;
+
     if (syncResult.exists) {
         // Nếu kết quả đồng bộ chưa có tiếng Anh cho từ Latinh (ví dụ problem, single, district chỉ có no/fr trong SQLite)
         const isLatin = /^[a-zA-Z\-']+$/.test(word.trim());
@@ -1829,40 +1831,67 @@ export async function lookupWord(word: string, lang?: string): Promise<MultiLook
                 if (wiktionaryRes && wiktionaryRes.exists && wiktionaryRes.results.length > 0) {
                     const enLangResult = wiktionaryRes.results.find(r => r.lang_code === 'en');
                     if (enLangResult && enLangResult.meanings.length > 0) {
-                        return normalizeResultPronunciations({
+                        finalResult = {
                             ...syncResult,
                             results: [enLangResult, ...syncResult.results]
-                        });
+                        };
                     }
                 }
             } catch (e) {
                 console.error('Wiktionary enrichment error:', e);
             }
         }
-        return normalizeResultPronunciations(syncResult);
-    }
-
-    // 1. Tra cứu Wiktionary & Từ điển Mở trước (từ điển ngôn ngữ, từ loại Noun/Verb/Adj/Adv, từ ghép, bản dịch...)
-    try {
-        const wiktionaryResult = await lookupWiktionaryFallback(word, lang);
-        if (wiktionaryResult && wiktionaryResult.exists && wiktionaryResult.results.length > 0) {
-            return normalizeResultPronunciations(wiktionaryResult);
+    } else {
+        // 1. Tra cứu Wiktionary & Từ điển Mở trước (từ điển ngôn ngữ, từ loại Noun/Verb/Adj/Adv, từ ghép, bản dịch...)
+        try {
+            const wiktionaryResult = await lookupWiktionaryFallback(word, lang);
+            if (wiktionaryResult && wiktionaryResult.exists && wiktionaryResult.results.length > 0) {
+                finalResult = wiktionaryResult;
+            }
+        } catch (e) {
+            console.error('Wiktionary fallback error:', e);
         }
-    } catch (e) {
-        console.error('Wiktionary fallback error:', e);
-    }
 
-    // 2. Nếu từ điển chưa có, tra cứu Bách khoa toàn thư Wikipedia (địa danh, tên riêng, thực thể văn hóa/khoa học)
-    try {
-        const wikiResult = await lookupWikiFallback(word, lang);
-        if (wikiResult && wikiResult.exists && wikiResult.results.length > 0) {
-            return normalizeResultPronunciations(wikiResult);
+        // 2. Nếu từ điển chưa có, tra cứu Bách khoa toàn thư Wikipedia (địa danh, tên riêng, thực thể văn hóa/khoa học)
+        if (!finalResult.exists) {
+            try {
+                const wikiResult = await lookupWikiFallback(word, lang);
+                if (wikiResult && wikiResult.exists && wikiResult.results.length > 0) {
+                    finalResult = wikiResult;
+                }
+            } catch (e) {
+                console.error('Wikipedia fallback error:', e);
+            }
         }
-    } catch (e) {
-        console.error('Wikipedia fallback error:', e);
     }
 
-    return normalizeResultPronunciations(syncResult);
+    const normalized = normalizeResultPronunciations(finalResult);
+
+    // 3. Tự động gọi API trực tuyến nếu phiên âm tiếng Anh bị thiếu hoặc cần làm giàu phiên âm quốc tế
+    const isEnglishLookup = !lang || lang === 'en';
+    if (normalized.exists && isEnglishLookup) {
+        const enResult = normalized.results.find(r => r.lang_code === 'en');
+        if (enResult) {
+            const hasGoodIpa = enResult.pronunciations && enResult.pronunciations.length > 0 &&
+                enResult.pronunciations.some(p => !isFakeIpa(p.ipa, normalized.word));
+            if (!hasGoodIpa) {
+                try {
+                    const onlineProns = await fetchOnlineEnglishPhonetics(normalized.word);
+                    if (onlineProns && onlineProns.length > 0) {
+                        enResult.pronunciations = onlineProns;
+                        enResult.phonetics = onlineProns;
+                        if (normalized.results[0] === enResult) {
+                            normalized.phonetics = onlineProns;
+                        }
+                    }
+                } catch {
+                    // Online phonetics error ignored
+                }
+            }
+        }
+    }
+
+    return normalized;
 }
 
 // Prepared statement for suggestions (lazy loaded)

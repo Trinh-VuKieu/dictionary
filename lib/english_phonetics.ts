@@ -1225,3 +1225,131 @@ export function generateEnglishIpa(word: string, region: 'US' | 'UK' = 'US'): st
     return `/${result}/`;
 }
 
+const ONLINE_PHONETICS_CACHE = new Map<string, DictionaryPronunciation[]>();
+const MAX_ONLINE_PHONETICS_CACHE = 2000;
+
+/**
+ * Tra cứu phiên âm trực tuyến đa tầng từ Wiktionary REST API và Datamuse CMUdict
+ * Tự động kích hoạt khi từ vựng bị thiếu phiên âm trong Database nội bộ
+ */
+export async function fetchOnlineEnglishPhonetics(word: string): Promise<DictionaryPronunciation[] | null> {
+    const clean = word.toLowerCase().trim();
+    if (!clean || clean.length < 2) return null;
+
+    if (ONLINE_PHONETICS_CACHE.has(clean)) {
+        return ONLINE_PHONETICS_CACHE.get(clean)!;
+    }
+
+    let usIpa: string | null = null;
+    let ukIpa: string | null = null;
+
+    // Tầng 1: Wiktionary API (cho âm US / GA và UK / RP chuẩn ngôn ngữ học quốc tế)
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        const url = `https://en.wiktionary.org/w/api.php?action=parse&page=${encodeURIComponent(clean)}&prop=wikitext&format=json`;
+        const res = await fetch(url, {
+            headers: { 'User-Agent': 'DictionaryApp/1.0 (https://dictionary-nine-sage.vercel.app)' },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+            const data = await res.json();
+            const text = data?.parse?.wikitext?.['*'];
+            if (text) {
+                const matches = [...text.matchAll(/\{\{IPA\|en\|([^}]+)\}\}/g)];
+                const allIpas: string[] = [];
+                for (const m of matches) {
+                    const group = m[1] as string;
+                    const parts: string[] = group.split('|').map((p: string) => p.trim());
+                    const ipas = parts.filter((p: string) => p.startsWith('/') && p.endsWith('/') && p.length > 2);
+                    allIpas.push(...ipas);
+
+                    const isUS = parts.some((p: string) => /a=.*(ga|us|ca\b|american)/i.test(p));
+                    const isUK = parts.some((p: string) => /a=.*(uk|rp|british|received)/i.test(p));
+
+                    if (isUS && !usIpa && ipas.length > 0) usIpa = ipas[0];
+                    if (isUK && !ukIpa && ipas.length > 0) ukIpa = ipas[0];
+                }
+
+                if (!usIpa && !ukIpa && allIpas.length > 0) {
+                    usIpa = allIpas[0];
+                    ukIpa = allIpas[1] || allIpas[0];
+                } else if (usIpa && !ukIpa) {
+                    ukIpa = allIpas.find((ipa: string) => ipa !== usIpa) || usIpa;
+                } else if (!usIpa && ukIpa) {
+                    usIpa = allIpas.find((ipa: string) => ipa !== ukIpa) || ukIpa;
+                }
+            }
+        }
+    } catch {
+        // Wiktionary fetch failed or timed out
+    }
+
+    // Tầng 2: Datamuse API (CMU Pronouncing Dictionary với > 134,000 từ vựng tiếng Anh)
+    if (!usIpa || !ukIpa) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+            const url = `https://api.datamuse.com/words?sp=${encodeURIComponent(clean)}&qe=sp&md=r&ipa=1`;
+            const res = await fetch(url, {
+                headers: { 'User-Agent': 'DictionaryApp/1.0' },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                const data = await res.json() as Array<{ word?: string; tags?: string[] }>;
+                if (Array.isArray(data)) {
+                    const item = data.find((d) => d.word?.toLowerCase() === clean);
+                    const ipaTag = item?.tags?.find((t: string) => t.startsWith('ipa_pron:'));
+                    if (ipaTag) {
+                        const rawIpa = ipaTag.replace('ipa_pron:', '').trim();
+                        if (rawIpa) {
+                            const formatted = `/${rawIpa}/`;
+                            if (!usIpa) usIpa = formatted;
+                            if (!ukIpa) ukIpa = formatted;
+                        }
+                    }
+                }
+            }
+        } catch {
+            // Datamuse fetch failed
+        }
+    }
+
+    if (usIpa || ukIpa) {
+        const us = usIpa || ukIpa!;
+        const uk = ukIpa || usIpa!;
+        const prons: DictionaryPronunciation[] = [
+            {
+                region: 'US',
+                ipa: us,
+                phonetic: us,
+                audio: `/api/v1/tts?word=${encodeURIComponent(clean)}&lang=en&accent=us`,
+                audioUrl: `/api/v1/tts?word=${encodeURIComponent(clean)}&lang=en&accent=us`
+            },
+            {
+                region: 'UK',
+                ipa: uk,
+                phonetic: uk,
+                audio: `/api/v1/tts?word=${encodeURIComponent(clean)}&lang=en&accent=uk`,
+                audioUrl: `/api/v1/tts?word=${encodeURIComponent(clean)}&lang=en&accent=uk`
+            }
+        ];
+
+        if (ONLINE_PHONETICS_CACHE.size >= MAX_ONLINE_PHONETICS_CACHE) {
+            const first = ONLINE_PHONETICS_CACHE.keys().next().value;
+            if (first) ONLINE_PHONETICS_CACHE.delete(first);
+        }
+        ONLINE_PHONETICS_CACHE.set(clean, prons);
+        return prons;
+    }
+
+    return null;
+}
+
+
