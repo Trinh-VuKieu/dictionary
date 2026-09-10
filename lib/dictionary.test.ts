@@ -1087,6 +1087,112 @@ describe('Dictionary Module', () => {
             const enGonna = resGonna.results.find(r => r.lang_code === 'en')!;
             expect(enGonna.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'go')).toBe(true);
         });
+
+        it('should correctly prioritize English and provide accurate definitions for "shown", "aluminium", and core words', async () => {
+            // 1. shown must return English first with grammatical note and /ʃoʊn/ IPA
+            const resShown = await lookupWord('shown');
+            expect(resShown.exists).toBe(true);
+            expect(resShown.results[0].lang_code).toBe('en');
+            expect(resShown.results[0].meanings[0].definition).toContain('quá khứ phân từ');
+            expect(resShown.results[0].pronunciations[0].ipa).toBe('/ʃoʊn/');
+            expect(resShown.results[0].relations.some(r => r.relation_type === 'Gốc từ' && r.related_word === 'show')).toBe(true);
+
+            // 2. aluminium must return English first with definition of aluminium
+            const resAlum = await lookupWord('aluminium');
+            expect(resAlum.exists).toBe(true);
+            expect(resAlum.results[0].lang_code).toBe('en');
+            expect(resAlum.results[0].meanings[0].definition).toContain('Nhôm');
+
+            // 3. eat, baby, machine must have rich meanings, pronunciations, and relations
+            const resEat = await lookupWord('eat', 'en');
+            expect(resEat.exists).toBe(true);
+            expect(resEat.results[0].meanings.length).toBeGreaterThan(1);
+            expect(resEat.results[0].pronunciations.length).toBeGreaterThan(0);
+            expect(resEat.results[0].relations.length).toBeGreaterThan(0);
+        });
+
+        it('should correctly provide "Gốc từ" for prefix derivatives, possessives, and prioritize shadowed words', async () => {
+            // 1. Prefix derivatives must have "Gốc từ"
+            const resUnhappy = await lookupWord('unhappy');
+            expect(resUnhappy.results[0].relations.some(r => r.relation_type === 'Gốc từ' && r.related_word === 'happy')).toBe(true);
+
+            const resImpossible = await lookupWord('impossible');
+            expect(resImpossible.results[0].relations.some(r => r.relation_type === 'Gốc từ' && r.related_word === 'possible')).toBe(true);
+
+            const resDislike = await lookupWord('dislike');
+            expect(resDislike.results[0].relations.some(r => r.relation_type === 'Gốc từ' && r.related_word === 'like')).toBe(true);
+
+            // 2. Possessive case must have relation_type === "Gốc từ"
+            const resDogs = await lookupWord("dog's");
+            expect(resDogs.results[0].relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'dog')).toBe(true);
+
+            // 3. Shadowed words like ran, sang, sung, rang, rung, lung must return English first
+            expect((await lookupWord('ran')).results[0].lang_code).toBe('en');
+            expect((await lookupWord('sang')).results[0].lang_code).toBe('en');
+            expect((await lookupWord('sung')).results[0].lang_code).toBe('en');
+            expect((await lookupWord('rang')).results[0].lang_code).toBe('en');
+            expect((await lookupWord('rung')).results[0].lang_code).toBe('en');
+            expect((await lookupWord('lung')).results[0].lang_code).toBe('en');
+
+            // 4. English words must always have non-empty translations
+            const resBook = await lookupWord('book', 'en');
+            expect(resBook.results[0].translations.length).toBeGreaterThan(0);
+            expect(resBook.results[0].translations[0].translation).toBe('Sách');
+        });
+
+        it('should correctly prioritize English for core dual-language words and provide complete pronunciations, relations, and translations', async () => {
+            const testWords = ['go', 'run', 'can', 'do', 'in', 'to', 'be', 'say', 'may', 'account', 'hotel', 'radio', 'code', 'game', 'audio', 'video', 'tennis', 'film', 'bank', 'visa'];
+            for (const w of testWords) {
+                const res = await lookupWord(w);
+                expect(res.exists).toBe(true);
+                expect(res.results[0].lang_code).toBe('en');
+                expect(res.results[0].pronunciations.length).toBe(2);
+                expect(res.results[0].pronunciations[0].region).toBe('US');
+                expect(res.results[0].pronunciations[1].region).toBe('UK');
+                expect(res.results[0].translations.length).toBeGreaterThan(0);
+                expect(res.results[0].meanings.length).toBeGreaterThan(0);
+            }
+        });
+
+        it('should correctly provide "Gốc từ" for all suffix derivatives', async () => {
+            const suffixTests: [string, string][] = [
+                ['happiness', 'happy'],
+                ['darkness', 'dark'],
+                ['teacher', 'teach'],
+                ['careful', 'care'],
+                ['careless', 'care'],
+                ['readable', 'read'],
+                ['development', 'develop'],
+                ['creation', 'create'],
+                ['decision', 'decide'],
+                ['quickly', 'quick']
+            ];
+
+            for (const [derived, root] of suffixTests) {
+                const res = await lookupWord(derived);
+                expect(res.results[0].lang_code).toBe('en');
+                const hasRoot = res.results[0].relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === root.toLowerCase());
+                expect(hasRoot).toBe(true);
+            }
+        });
+
+        it('should provide clean non-meta translations and support English translations for Vietnamese words', async () => {
+            // 1. Inflected forms must inherit clean translations instead of "Dạng phân từ..."
+            const resKidding = await lookupWord('kidding');
+            expect(resKidding.results[0].translations.length).toBeGreaterThan(0);
+            expect(resKidding.results[0].translations[0].translation).not.toContain('Dạng phân từ');
+
+            const resGulping = await lookupWord('gulping');
+            expect(resGulping.results[0].translations.length).toBeGreaterThan(0);
+            expect(resGulping.results[0].translations[0].translation).not.toContain('Dạng phân từ');
+
+            // 2. Vietnamese words must extract English translations from English definitions
+            const resHanhPhuc = await lookupWord('hạnh phúc');
+            expect(resHanhPhuc.results[0].lang_code).toBe('vi');
+            expect(resHanhPhuc.results[0].translations.length).toBeGreaterThan(0);
+            expect(resHanhPhuc.results[0].translations[0].lang_code).toBe('en');
+            expect(resHanhPhuc.results[0].translations[0].translation.toLowerCase()).toBe('happy');
+        });
     })
 })
 

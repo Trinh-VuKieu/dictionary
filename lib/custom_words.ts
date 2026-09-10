@@ -1648,7 +1648,11 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
     "shown": {
         word: "shown",
         aliasTo: "show",
-        note: "Dạng quá khứ phân từ (Past Participle - V3) của động từ 'show' (được chỉ ra, được cho thấy, được trình diễn)."
+        note: "Dạng quá khứ phân từ (Past Participle - V3) của động từ 'show' (được chỉ ra, được cho thấy, được trình diễn).",
+        pronunciations: [
+            { ipa: "/ʃoʊn/", region: "US" },
+            { ipa: "/ʃəʊn/", region: "UK" }
+        ]
     },
 
     "selves": {

@@ -567,9 +567,9 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
             enPronAssigned = true;
             updatedAudio = `/api/v1/tts?word=${encodeURIComponent(lookupRes.word)}&lang=en`;
             updatedPronunciations = formatUsUkPronunciations(lookupRes.word, res.pronunciations);
-        } else if (hasEn) {
-            // Khi đã có tiếng Anh: không trả phiên âm cho các ngôn ngữ phụ (Pháp, Đức, VN...)
-            // để đảm bảo mỗi từ CHỈ trả ĐÚNG 2 phiên âm US và UK
+        } else if (hasEn && index !== 0) {
+            // Khi đã có tiếng Anh: không trả phiên âm cho các ngôn ngữ phụ (Pháp, Đức, VN...) ở các vị trí sau
+            // để đảm bảo mỗi từ tiếng Anh CHỈ trả ĐÚNG 2 phiên âm US và UK
             updatedPronunciations = [];
         } else if (isNumberOrLatin && !enPronAssigned && index === 0) {
             // Từ chữ cái Latinh hoặc chữ số: luôn trả ĐÚNG 2 phiên âm US và UK
@@ -603,6 +603,47 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
         ...lookupRes,
         results: normalizedResults
     };
+}
+
+function isMetaGrammarDefinition(def: string): boolean {
+    const trimmed = def.trim().toLowerCase();
+    return /^(số nhiều|dạng quá khứ|động từ quá khứ|quá khứ|thì quá khứ|phân từ|dạng phân từ|động từ chia|dạng ngôi thứ|so sánh hơn|so sánh nhất|danh động từ|dạng thay thế)/i.test(trimmed) ||
+           /^(dạng\s+|động từ\s+)?(quá khứ|phân từ|ngôi thứ ba|số nhiều|chia thì|thay thế).+của\s+[a-z]+/i.test(trimmed);
+}
+
+function extractCleanVietnameseTerm(rawDef: string): string | null {
+    if (!rawDef) return null;
+    if (isMetaGrammarDefinition(rawDef)) return null;
+
+    let clean = rawDef
+        .replace(/\([^)]*\)/g, '')
+        .replace(/\[[^\]]*\]/g, '')
+        .replace(/\{\{[^}]*\}\}/g, '')
+        .replace(/^(?:như|xem|thuộc|chỉ)\s+/i, '')
+        .trim();
+
+    if (!clean) return null;
+    const firstTerm = clean.split(/[,;\n\.]/)[0]?.trim();
+    if (firstTerm && firstTerm.length >= 2 && firstTerm.length <= 40 && !firstTerm.includes('{') && !firstTerm.includes('<')) {
+        return firstTerm;
+    }
+    return null;
+}
+
+function extractCleanEnglishTerm(rawDef: string): string | null {
+    if (!rawDef) return null;
+    let clean = rawDef
+        .replace(/\([^)]*\)/g, '')
+        .replace(/\[[^\]]*\]/g, '')
+        .replace(/\{\{[^}]*\}\}/g, '')
+        .trim();
+
+    if (!clean) return null;
+    const firstTerm = clean.split(/[,;\n\.]/)[0]?.trim();
+    if (firstTerm && firstTerm.length >= 2 && firstTerm.length <= 40 && !firstTerm.includes('{') && !firstTerm.includes('<')) {
+        return firstTerm;
+    }
+    return null;
 }
 
 function getWordData(wordId: number, wordText: string, langCode: string): LanguageResult {
@@ -655,7 +696,38 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
     if (langCode === 'en') {
         pronunciations = formatUsUkPronunciations(wordText, pronunciations);
     }
-    const translations = getTranslationsStmt!.all(wordId) as DictionaryTranslation[];
+    let translations = getTranslationsStmt!.all(wordId) as DictionaryTranslation[];
+    if (translations.length === 0 && langCode === 'en' && updatedMeanings.length > 0) {
+        // Tìm định nghĩa tiếng Việt sạch đầu tiên
+        for (const m of updatedMeanings) {
+            if (m.definition_lang === 'vi') {
+                const term = extractCleanVietnameseTerm(m.definition);
+                if (term) {
+                    translations = [{
+                        lang_code: 'vi',
+                        lang_name: 'Tiếng Việt',
+                        translation: term
+                    }];
+                    break;
+                }
+            }
+        }
+    } else if (translations.length === 0 && langCode === 'vi' && updatedMeanings.length > 0) {
+        // Tìm định nghĩa tiếng Anh cho từ tiếng Việt
+        for (const m of updatedMeanings) {
+            if (m.definition_lang === 'en') {
+                const term = extractCleanEnglishTerm(m.definition);
+                if (term) {
+                    translations = [{
+                        lang_code: 'en',
+                        lang_name: 'Tiếng Anh',
+                        translation: term
+                    }];
+                    break;
+                }
+            }
+        }
+    }
     const relations = getRelationsStmt!.all(wordId) as DictionaryRelation[];
 
     const updatedTranslations = translations.map((t) => ({
@@ -778,20 +850,115 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
 }
 
 /**
- * Kiểm tra định nghĩa có phải là mô tả ngữ pháp meta (Số nhiều của..., Quá khứ của...)
- */
-function isMetaGrammarDefinition(def: string): boolean {
-    const trimmed = def.trim().toLowerCase();
-    return /^(số nhiều|dạng quá khứ|động từ quá khứ|quá khứ|thì quá khứ|phân từ|dạng phân từ|động từ chia|dạng ngôi thứ|so sánh hơn|so sánh nhất|danh động từ)/i.test(trimmed) ||
-           /^(dạng\s+|động từ\s+)?(quá khứ|phân từ|ngôi thứ ba|số nhiều|chia thì).+của\s+[a-z]+/i.test(trimmed);
-}
-
-/**
  * Tự động làm giàu các từ tiếng Anh bị thiếu nghĩa hoặc chỉ có định nghĩa meta bằng cách lấy nghĩa từ từ gốc (lemma)
  */
 function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: LanguageResult): LanguageResult {
     const lowerWord = cleanWord.toLowerCase();
     const lemmas = getLemmas(lowerWord);
+
+    // 1. Bổ sung nhận diện tiền tố tiếng Anh (un-, dis-, im-, in-, non-, mis-, re-, over-, under-)
+    const prefixRules: RegExp[] = [
+        /^un([a-z]{3,})$/,
+        /^dis([a-z]{3,})$/,
+        /^(?:im|in|il|ir)([a-z]{3,})$/,
+        /^non\-?([a-z]{3,})$/,
+        /^mis([a-z]{3,})$/,
+        /^re([a-z]{3,})$/,
+        /^over([a-z]{3,})$/,
+        /^under([a-z]{3,})$/
+    ];
+    for (const regex of prefixRules) {
+        const m = lowerWord.match(regex);
+        if (m) {
+            const root = m[1];
+            if (root.length >= 3 && root !== lowerWord) {
+                const rootRes = lookupDirectFromDb(root, 'en');
+                if (rootRes.exists && rootRes.results.some(r => r.lang_code === 'en')) {
+                    if (!lemmas.some(l => l.lemma.toLowerCase() === root)) {
+                        lemmas.push({
+                            lemma: root,
+                            posType: 'adjective',
+                            explanation: `Từ phái sinh có tiền tố từ gốc "${root}".`
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Bổ sung nhận diện hậu tố tiếng Anh (-ness, -ful, -less, -able, -ible, -ment, -tion, -sion, -er, -or, -ly)
+    const suffixCandidates: string[] = [];
+    if (lowerWord.endsWith('ness') && lowerWord.length > 5) {
+        const base = lowerWord.slice(0, -4);
+        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+        suffixCandidates.push(base);
+    }
+    if (lowerWord.endsWith('ful') && lowerWord.length > 4) {
+        const base = lowerWord.slice(0, -3);
+        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+        suffixCandidates.push(base);
+    }
+    if (lowerWord.endsWith('less') && lowerWord.length > 5) {
+        const base = lowerWord.slice(0, -4);
+        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+        suffixCandidates.push(base);
+    }
+    if (lowerWord.endsWith('able') && lowerWord.length > 5) {
+        const base = lowerWord.slice(0, -4);
+        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+        suffixCandidates.push(base, base + 'e');
+    } else if (lowerWord.endsWith('ible') && lowerWord.length > 5) {
+        const base = lowerWord.slice(0, -4);
+        suffixCandidates.push(base, base + 'e');
+    }
+    if (lowerWord.endsWith('ment') && lowerWord.length > 5) {
+        const base = lowerWord.slice(0, -4);
+        suffixCandidates.push(base);
+        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+    }
+    if (lowerWord.endsWith('sion') && lowerWord.length > 5) {
+        suffixCandidates.push(lowerWord.slice(0, -4) + 'de', lowerWord.slice(0, -4) + 't');
+    }
+    if (lowerWord.endsWith('ation') && lowerWord.length > 6) {
+        suffixCandidates.push(lowerWord.slice(0, -3) + 'e', lowerWord.slice(0, -5), lowerWord.slice(0, -5) + 'e');
+    }
+    if (lowerWord.endsWith('ion') && lowerWord.length > 4) {
+        suffixCandidates.push(lowerWord.slice(0, -3), lowerWord.slice(0, -3) + 'e');
+    }
+    if (lowerWord.endsWith('er') && lowerWord.length > 4) {
+        const base = lowerWord.slice(0, -2);
+        if (base.length >= 3 && base[base.length - 1] === base[base.length - 2] && !/[aeiouy]/.test(base[base.length - 1])) {
+            suffixCandidates.push(base.slice(0, -1));
+        }
+        suffixCandidates.push(base, base + 'e');
+        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+    } else if (lowerWord.endsWith('or') && lowerWord.length > 4) {
+        const base = lowerWord.slice(0, -2);
+        if (base.length >= 3 && base[base.length - 1] === base[base.length - 2] && !/[aeiouy]/.test(base[base.length - 1])) {
+            suffixCandidates.push(base.slice(0, -1));
+        }
+        suffixCandidates.push(base, base + 'e', base + 't');
+    }
+    if (lowerWord.endsWith('ily') && lowerWord.length > 4) {
+        suffixCandidates.push(lowerWord.slice(0, -3) + 'y');
+    } else if (lowerWord.endsWith('ly') && lowerWord.length > 3) {
+        suffixCandidates.push(lowerWord.slice(0, -2));
+    }
+
+    for (const cand of suffixCandidates) {
+        if (cand.length >= 3 && cand !== lowerWord && !lemmas.some(l => l.lemma.toLowerCase() === cand)) {
+            const rootRes = lookupDirectFromDb(cand, 'en');
+            if (rootRes.exists && rootRes.results.some(r => r.lang_code === 'en')) {
+                lemmas.push({
+                    lemma: cand,
+                    posType: 'noun',
+                    explanation: `Từ phái sinh có hậu tố từ gốc "${cand}".`
+                });
+                break;
+            }
+        }
+    }
+
     if (!lemmas || lemmas.length === 0) {
         return currentResult;
     }
@@ -799,6 +966,7 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
     let relations = [...currentResult.relations];
     let pronunciations = currentResult.pronunciations;
     let meanings = [...currentResult.meanings];
+    let translations = [...currentResult.translations];
     let hasEnrichedMeanings = false;
 
     // 1. Luôn bổ sung quan hệ Gốc từ cho tất cả các lemma hợp lệ
@@ -833,6 +1001,11 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
             }
         }
 
+        // Kế thừa bản dịch từ từ gốc nếu từ hiện tại chưa có hoặc bản dịch hiện tại là mô tả ngữ pháp
+        if ((translations.length === 0 || translations.some(t => isMetaGrammarDefinition(t.translation))) && baseEnglish.translations.length > 0) {
+            translations = [...baseEnglish.translations];
+        }
+
         // Nếu từ hiện tại có định nghĩa meta hoặc có quá ít nghĩa so với từ gốc
         if ((hasMetaDef || isPoorDefs) && !hasEnrichedMeanings && baseEnglish.meanings.length > 0) {
             hasEnrichedMeanings = true;
@@ -865,6 +1038,7 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
         ...currentResult,
         meanings,
         pronunciations,
+        translations,
         relations
     };
 }
@@ -897,7 +1071,16 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
         if (targetAlias) {
             const baseResult = lookupWordSync(targetAlias, lang);
             if (baseResult.exists) {
-                const results = baseResult.results.map(r => {
+                // Nếu từ tra cứu có dạng tiếng Anh / Latinh, ưu tiên kết quả tiếng Anh lên đầu
+                let sortedResults = [...baseResult.results];
+                if (!lang && /^[a-zA-Z\-']+$/.test(cleanWord)) {
+                    const enIdx = sortedResults.findIndex(r => r.lang_code === 'en');
+                    if (enIdx > 0) {
+                        const enRes = sortedResults.splice(enIdx, 1)[0];
+                        sortedResults.unshift(enRes);
+                    }
+                }
+                const results = sortedResults.map((r, idx) => {
                     const relations = [...r.relations];
                     if (!relations.some(rel => rel.related_word.toLowerCase() === targetAlias.toLowerCase() && rel.relation_type === 'Gốc từ')) {
                         relations.unshift({
@@ -905,8 +1088,27 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                             relation_type: 'Gốc từ'
                         });
                     }
+                    let meanings = [...r.meanings];
+                    if (customEntry.note && (r.lang_code === 'en' || idx === 0)) {
+                        const noteMeaning: DictionaryMeaning = {
+                            definition: customEntry.note,
+                            definition_lang: 'vi',
+                            example: null,
+                            pos: r.meanings[0]?.pos || 'Ngữ pháp',
+                            sub_pos: 'Ghi chú ngữ pháp',
+                            source: 'Custom',
+                            links: [targetAlias]
+                        };
+                        meanings = [noteMeaning, ...meanings];
+                    }
+                    let pronunciations = r.pronunciations;
+                    if (customEntry.pronunciations && customEntry.pronunciations.length > 0) {
+                        pronunciations = customEntry.pronunciations;
+                    }
                     return {
                         ...r,
+                        meanings,
+                        pronunciations,
                         relations
                     };
                 });
@@ -969,23 +1171,44 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
             return r;
         });
 
+        // Tối ưu thứ tự ngôn ngữ thông minh khi không truyền tham số lang:
+        // Đối với từ đơn chữ cái Latinh không dấu (ví dụ: go, run, can, do, in, to, account, hotel, game, code, tennis, film...):
+        // Nếu có kết quả tiếng Anh hợp lệ, tự động đưa tiếng Anh lên results[0] để đảm bảo đầy đủ phiên âm US/UK, quan hệ và bản dịch
+        // (Ngoại trừ một số ít từ đơn thuần Việt như: ai, cha, em, qua, ra, xe)
+        if (!lang && enrichedResults.length > 1) {
+            const isPureLatinSingleWord = cleanWord.trim().length >= 2 && /^[a-zA-Z\-']+$/.test(cleanWord.trim()) && !cleanWord.trim().includes(' ');
+            const PURE_VIETNAMESE_MONOSYLLABLES = new Set(['ai', 'cha', 'em', 'qua', 'ra', 'xe']);
+            const isPureVi = PURE_VIETNAMESE_MONOSYLLABLES.has(cleanWord.toLowerCase());
+
+            if (isPureLatinSingleWord && !isPureVi) {
+                const enIdx = enrichedResults.findIndex(r => r.lang_code === 'en' && (r.meanings.length > 0 || r.translations.length > 0));
+                if (enIdx > 0) {
+                    const enRes = enrichedResults.splice(enIdx, 1)[0];
+                    enrichedResults.unshift(enRes);
+                }
+            }
+        }
+
         // Xử lý hiện tượng ngôn ngữ lạ che lấp tiếng Anh (ví dụ: made ra Dungan, came/best ra Pháp/Na Uy...)
         const isLatin = /^[a-zA-Z\-']+$/.test(cleanWord);
         const hasEn = enrichedResults.some(r => r.lang_code === 'en' && r.meanings.length > 0);
         if (isLatin && !hasEn && !lang) {
-            const lemmas = getLemmas(cleanWord);
-            for (const item of lemmas) {
-                if (item.lemma.toLowerCase() === cleanWord.toLowerCase()) continue;
-                const baseResult = lookupDirectFromDb(item.lemma, 'en');
+            const candidates = [
+                ...getLemmas(cleanWord).map(l => l.lemma),
+                ...getSpellingVariants(cleanWord)
+            ];
+            for (const cand of candidates) {
+                if (cand.toLowerCase() === cleanWord.toLowerCase()) continue;
+                const baseResult = lookupDirectFromDb(cand, 'en');
                 if (baseResult.exists && baseResult.results.length > 0) {
                     const baseEn = baseResult.results.find(r => r.lang_code === 'en');
                     if (baseEn && baseEn.meanings.length > 0) {
                         const lemmaEnResult: LanguageResult = {
                             ...baseEn,
-                            audio: `/api/v1/tts?word=${encodeURIComponent(item.lemma)}&lang=en`,
+                            audio: `/api/v1/tts?word=${encodeURIComponent(cand)}&lang=en`,
                             meanings: [...baseEn.meanings],
                             relations: [
-                                { related_word: item.lemma, relation_type: 'Gốc từ' },
+                                { related_word: cand, relation_type: 'Gốc từ' },
                                 ...baseEn.relations
                             ]
                         };
@@ -1118,7 +1341,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                     audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
                     meanings: [noteMeaning, ...r.meanings],
                     relations: [
-                        { related_word: possessive.displayBase, relation_type: 'Gốc từ / Tên riêng' },
+                        { related_word: possessive.displayBase, relation_type: 'Gốc từ' },
                         ...r.relations
                     ]
                 };
@@ -1148,7 +1371,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                 pronunciations: formatUsUkPronunciations(cleanWord),
                 translations: [],
                 relations: [
-                    { related_word: possessive.displayBase, relation_type: 'Tên riêng / Từ gốc' }
+                    { related_word: possessive.displayBase, relation_type: 'Gốc từ' }
                 ]
             };
 
