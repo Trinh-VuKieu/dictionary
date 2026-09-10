@@ -1193,6 +1193,29 @@ describe('Dictionary Module', () => {
             expect(resHanhPhuc.results[0].translations[0].lang_code).toBe('en');
             expect(resHanhPhuc.results[0].translations[0].translation.toLowerCase()).toBe('happy');
         });
+
+        it('should provide full Java DictionaryWord compatibility (rootWord, phonetics US/UK, synonyms, antonyms, meaning_groups)', async () => {
+            const resGo = await lookupWord('go');
+            expect(resGo.exists).toBe(true);
+            expect(resGo.word).toBe('go');
+            expect(resGo.rootWord).toBe(null);
+            expect(resGo.phonetics!.length).toBe(2);
+            expect(resGo.phonetics![0].audioUrl).toBeDefined();
+            expect(resGo.phonetics![1].audioUrl).toBeDefined();
+            expect(resGo.phonetics![0].phonetic).toBeDefined();
+            expect(resGo.phonetics![1].phonetic).toBeDefined();
+            expect(resGo.synonyms!.length).toBeGreaterThan(0);
+            expect(resGo.antonyms!.length).toBeGreaterThan(0);
+            expect(resGo.meaning_groups!.length).toBeGreaterThan(0);
+            expect(resGo.meaning_groups![0].partOfSpeech).toBeDefined();
+            expect(resGo.meaning_groups![0].definitions.length).toBeGreaterThan(0);
+
+            const resWent = await lookupWord('went');
+            expect(resWent.rootWord).toBe('go');
+            expect(resWent.phonetics!.length).toBe(2);
+            expect(resWent.synonyms!.length).toBeGreaterThan(0);
+            expect(resWent.antonyms!.length).toBeGreaterThan(0);
+        });
     })
 })
 

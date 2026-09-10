@@ -87,6 +87,20 @@ export async function GET(req: Request) {
             }, { status: 200, headers: CACHE_HEADERS });
         }
 
+        const format = searchParams.get('format') || undefined;
+
+        // Support direct DictionaryWord format for Java backend
+        if (format === 'model' || format === 'edu' || format === 'dictionary_word') {
+            const primary = result.results[0];
+            return NextResponse.json({
+                id: null,
+                word: result.word,
+                rootWord: result.rootWord ?? null,
+                phonetics: result.phonetics || primary?.phonetics || [],
+                meanings: result.meaning_groups || primary?.meaning_groups || []
+            }, { status: 200, headers: CACHE_HEADERS });
+        }
+
         return NextResponse.json(result, { status: 200, headers: CACHE_HEADERS });
     } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : String(err);

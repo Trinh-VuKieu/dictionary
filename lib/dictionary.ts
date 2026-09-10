@@ -105,6 +105,22 @@ export interface DictionaryPronunciation {
     phonetic?: string; // Alias tương thích cho các backend/client đọc trường phonetic
     region: string | null;
     audio?: string;
+    audioUrl?: string; // Alias tương thích cho backend Java đọc audioUrl
+}
+
+export interface GroupedDefinition {
+    definition: string;
+    definitionVi?: string;
+    example?: string | null;
+}
+
+export interface GroupedMeaning {
+    partOfSpeech: string;
+    part_of_speech?: string;
+    pos?: string;
+    definitions: GroupedDefinition[];
+    synonyms: string[];
+    antonyms: string[];
 }
 
 export interface DictionaryTranslation {
@@ -122,9 +138,15 @@ export interface DictionaryRelation {
 export interface LanguageResult {
     lang_code: string;
     lang_name: string;
+    word?: string;
+    rootWord?: string | null; // Từ gốc nguyên thể (root word / lemma) nếu là dạng chia thì/biến thể (vd: "went" -> "go")
+    root_word?: string | null;
     audio: string;
     meanings: DictionaryMeaning[];
+    meaning_groups?: GroupedMeaning[];
+    meaningGroups?: GroupedMeaning[];
     pronunciations: DictionaryPronunciation[];
+    phonetics?: DictionaryPronunciation[]; // Alias tương thích cho backend Java
     translations: DictionaryTranslation[];
     relations: DictionaryRelation[];
     synonyms?: string[];
@@ -135,6 +157,8 @@ export interface LanguageResult {
 export interface MultiLookupResult {
     exists: boolean;
     word: string;
+    rootWord?: string | null;
+    root_word?: string | null;
     results: LanguageResult[];
 }
 
@@ -520,15 +544,74 @@ export function formatUsUkPronunciations(
             region: 'US',
             ipa: finalUsIpa,
             phonetic: finalUsIpa,
-            audio: usAudio
+            audio: usAudio,
+            audioUrl: usAudio
         },
         {
             region: 'UK',
             ipa: finalUkIpa,
             phonetic: finalUkIpa,
-            audio: ukAudio
+            audio: ukAudio,
+            audioUrl: ukAudio
         }
     ];
+}
+
+export function normalizePartOfSpeech(pos: string | null | undefined): string {
+    if (!pos) return 'other';
+    const trimmed = pos.trim();
+    const lower = trimmed.toLowerCase();
+
+    if (lower === 'v' || lower === 'verb' || lower.includes('động từ')) return 'verb';
+    if (lower === 'n' || lower === 'noun' || lower.includes('danh từ')) return 'noun';
+    if (lower === 'a' || lower === 'adj' || lower === 'adjective' || lower.includes('tính từ')) return 'adjective';
+    if (lower === 'd' || lower === 'r' || lower === 'adv' || lower === 'adverb' || lower.includes('phó từ') || lower.includes('trạng từ')) return 'adverb';
+    if (lower === 'p' || lower === 'prep' || lower === 'preposition' || lower.includes('giới từ')) return 'preposition';
+    if (lower === 'c' || lower === 'conj' || lower === 'conjunction' || lower.includes('liên từ')) return 'conjunction';
+    if (lower === 'i' || lower === 'interj' || lower === 'interjection' || lower.includes('thán từ')) return 'interjection';
+    if (lower === 'pron' || lower === 'pronoun' || lower.includes('đại từ')) return 'pronoun';
+    if (lower === 'm' || lower.includes('số từ')) return 'numeral';
+
+    return lower;
+}
+
+export function buildMeaningGroups(
+    meanings: DictionaryMeaning[],
+    synonyms: string[] = [],
+    antonyms: string[] = []
+): GroupedMeaning[] {
+    const groupMap = new Map<string, { partOfSpeech: string; pos: string; definitions: GroupedDefinition[] }>();
+
+    for (const m of meanings) {
+        const rawPos = m.pos || 'Other';
+        const posKey = normalizePartOfSpeech(rawPos);
+        if (!groupMap.has(posKey)) {
+            groupMap.set(posKey, {
+                partOfSpeech: posKey,
+                pos: rawPos,
+                definitions: []
+            });
+        }
+        groupMap.get(posKey)!.definitions.push({
+            definition: m.definition,
+            definitionVi: m.definition_lang === 'vi' ? m.definition : (m.definition_lang === 'en' ? undefined : m.definition),
+            example: m.example || null
+        });
+    }
+
+    const groups: GroupedMeaning[] = [];
+    for (const [, grp] of groupMap.entries()) {
+        groups.push({
+            partOfSpeech: grp.partOfSpeech,
+            part_of_speech: grp.partOfSpeech,
+            pos: grp.pos,
+            definitions: grp.definitions,
+            synonyms: synonyms,
+            antonyms: antonyms
+        });
+    }
+
+    return groups;
 }
 
 /**
@@ -589,18 +672,36 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
             });
         }
 
+        const rootRel = relations.find(r => r.relation_type === 'Gốc từ');
+        const rootWord = rootRel ? rootRel.related_word : null;
+        const meaningGroups = buildMeaningGroups(res.meanings, synonyms, antonyms);
+
         return {
             ...res,
+            word: lookupRes.word,
+            rootWord,
+            root_word: rootWord,
             audio: updatedAudio,
             pronunciations: updatedPronunciations,
+            phonetics: updatedPronunciations,
+            meaning_groups: meaningGroups,
+            meaningGroups: meaningGroups,
             relations,
             synonyms,
             antonyms
         };
     });
 
+    const primary = normalizedResults[0];
     return {
         ...lookupRes,
+        rootWord: primary?.rootWord ?? null,
+        root_word: primary?.root_word ?? null,
+        phonetics: primary?.phonetics ?? [],
+        synonyms: primary?.synonyms ?? [],
+        antonyms: primary?.antonyms ?? [],
+        meaning_groups: primary?.meaning_groups ?? [],
+        meaningGroups: primary?.meaningGroups ?? [],
         results: normalizedResults
     };
 }
