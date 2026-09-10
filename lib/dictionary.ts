@@ -159,6 +159,11 @@ export interface MultiLookupResult {
     word: string;
     rootWord?: string | null;
     root_word?: string | null;
+    phonetics?: DictionaryPronunciation[];
+    synonyms?: string[];
+    antonyms?: string[];
+    meaning_groups?: GroupedMeaning[];
+    meaningGroups?: GroupedMeaning[];
     results: LanguageResult[];
 }
 
