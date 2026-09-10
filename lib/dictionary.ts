@@ -1220,8 +1220,10 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                         relations
                     };
                 });
+                const isTypoCorrection = customEntry.note?.toLowerCase().includes('lỗi chính tả');
                 return normalizeResultPronunciations({
                     ...baseResult,
+                    word: isTypoCorrection ? targetAlias : (customEntry.word || cleanWord),
                     results
                 });
             }
@@ -1532,6 +1534,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
             });
             return normalizeResultPronunciations({
                 ...lemmaResult,
+                word: cleanWord,
                 results
             });
         }
@@ -1578,6 +1581,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
             });
             return normalizeResultPronunciations({
                 ...lemmaResult,
+                word: cleanWord,
                 results
             });
         }
@@ -1611,6 +1615,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
             });
             return normalizeResultPronunciations({
                 ...rootResult,
+                word: cleanWord,
                 results
             });
         }
