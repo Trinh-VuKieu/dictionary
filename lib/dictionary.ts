@@ -72,7 +72,8 @@ const RELATION_LABELS: Record<string, string> = {
     s: 'Đồng nghĩa',
     a: 'Trái nghĩa',
     d: 'Từ phái sinh',
-    r: 'Liên quan'
+    r: 'Liên quan',
+    g: 'Gốc từ'
 };
 
 // Language labels - auto-generated from kaikki.org-dictionary-all.jsonl
@@ -83,6 +84,8 @@ import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
 import { VN_UNACCENTED_PLACES, getPlaceOrName, getPlacesSuggestions } from './places_and_names';
 import { lookupWikiFallback } from './wiki_fallback';
 import { lookupWiktionaryFallback } from './wiktionary_fallback';
+import { getEnglishPhoneticFallback } from './english_phonetics';
+import { getSynonymsAndAntonyms, getThesaurusEntry } from './synonyms_antonyms';
 
 
 
@@ -99,7 +102,9 @@ export interface DictionaryMeaning {
 
 export interface DictionaryPronunciation {
     ipa: string;
+    phonetic?: string; // Alias tương thích cho các backend/client đọc trường phonetic
     region: string | null;
+    audio?: string;
 }
 
 export interface DictionaryTranslation {
@@ -122,6 +127,8 @@ export interface LanguageResult {
     pronunciations: DictionaryPronunciation[];
     translations: DictionaryTranslation[];
     relations: DictionaryRelation[];
+    synonyms?: string[];
+    antonyms?: string[];
 }
 
 // Multi-language lookup result
@@ -142,6 +149,8 @@ export interface LookupResult {
     pronunciations?: DictionaryPronunciation[];
     translations?: DictionaryTranslation[];
     relations?: DictionaryRelation[];
+    synonyms?: string[];
+    antonyms?: string[];
 }
 
 // Singleton database instance (lazy loaded)
@@ -342,6 +351,260 @@ function normalizeVietnamese(text: string): string {
     return result;
 }
 
+function sanitizeDefinition(rawDef: string): string {
+    if (!rawDef) return '';
+    let text = rawDef.trim();
+
+    // 1. Loại bỏ các template rác wiktionary chưa dịch hoặc placeholder
+    if (text.includes('{{rfdef}}') || text.includes('{{#switch:')) {
+        return '';
+    }
+
+    // 2. Chuyển đổi các nhãn chuyên ngành Wiktionary sang dạng chú thích tiếng Việt rõ ràng
+    text = text
+        .replace(/\[\[thgt><đùa\|Thgt><đùa\]\]/gi, '(Thông tục, đùa)')
+        .replace(/\[\[Mỹ><thgt\]\]/gi, '(Mỹ, thông tục)')
+        .replace(/\[\[(?:<động>\|<động>|<động>)\]\]/gi, '(Động vật học)')
+        .replace(/\[\[(?:<đùa>\|<đùa>|<đùa>)\]\]/gi, '(Đùa)')
+        .replace(/<động>/gi, '(Động vật học)')
+        .replace(/<địa>/gi, '(Địa chất học)')
+        .replace(/<thgt>/gi, '(Thông tục)')
+        .replace(/<toán>/gi, '(Toán học)')
+        .replace(/<y>/gi, '(Y học)');
+
+    // 3. Loại bỏ wiki links rỗng [[|]] hoặc [[]]
+    text = text.replace(/\[\[\|\]\]/g, '').replace(/\[\[\]\]/g, '');
+
+    // 4. Giải mã cú pháp [[link|text]] -> text, [[link]] -> link
+    text = text.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2');
+    text = text.replace(/\[\[([^\]]+)\]\]/g, '$1');
+
+    // 5. Loại bỏ các template {{...}} còn sót lại
+    text = text.replace(/\{\{[^}]+\}\}/g, '');
+
+    // 6. Chuẩn hóa khoảng trắng
+    text = text.replace(/\s+/g, ' ').trim();
+
+    // 7. Lọc bỏ nếu chỉ là ký tự đặc biệt hoặc dấu chấm đơn lẻ
+    if (/^[.,;:!?'"_\-\s]+$/.test(text)) {
+        return '';
+    }
+
+    return text;
+}
+
+/**
+ * Chuẩn hóa chuỗi IPA: luôn đảm bảo bắt đầu bằng '/' và kết thúc bằng '/'
+ */
+export function cleanIpa(raw: string | null | undefined, fallbackWord?: string): string {
+    if (!raw || !raw.trim()) {
+        return fallbackWord ? `/${fallbackWord.trim()}/` : '//';
+    }
+    const s = raw.trim().replace(/^\/+|\/+$/g, '').trim();
+    if (!s) {
+        return fallbackWord ? `/${fallbackWord.trim()}/` : '//';
+    }
+    return `/${s}/`;
+}
+
+/**
+ * Chuẩn hóa phiên âm tiếng Anh luôn trả về ĐÚNG 2 mục: US và UK kèm audio riêng biệt cho mỗi giọng
+ */
+export function formatUsUkPronunciations(
+    wordText: string,
+    rawPronunciations?: DictionaryPronunciation[]
+): DictionaryPronunciation[] {
+    const cleanWord = wordText.toLowerCase().trim();
+
+    // Nếu là chữ số thuần túy (0-20...), chuyển sang phát âm tiếng Anh tương ứng (0 -> zero, 1 -> one, 4 -> four...)
+    if (/^\d+$/.test(cleanWord)) {
+        const num = parseInt(cleanWord, 10);
+        if (num >= 0 && num <= 20) {
+            const numWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+            const wordEquiv = numWords[num];
+            return formatUsUkPronunciations(wordEquiv);
+        }
+    }
+
+    const usAudio = `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=en&accent=us`;
+    const ukAudio = `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=en&accent=uk`;
+
+    let usIpa: string | null = null;
+    let ukIpa: string | null = null;
+
+    // 1. Kiểm tra từ điển phiên âm chuẩn tĩnh trước (ENGLISH_PHONETICS_MAP)
+    const mapFallback = getEnglishPhoneticFallback(cleanWord);
+    if (mapFallback && mapFallback.length > 0) {
+        const usFound = mapFallback.find(p => p.region === 'US' || p.region?.includes('US'));
+        const ukFound = mapFallback.find(p => p.region === 'UK' || p.region?.includes('UK'));
+        if (usFound) usIpa = usFound.ipa;
+        if (ukFound) ukIpa = ukFound.ipa;
+    }
+
+    // 2. Tìm trong rawPronunciations từ SQLite
+    if ((!usIpa || !ukIpa) && rawPronunciations && rawPronunciations.length > 0) {
+        for (const p of rawPronunciations) {
+            const reg = (p.region || '').toLowerCase();
+            const ipa = p.ipa;
+
+            // Nhận diện US qua region hoặc đặc trưng nguyên âm US (oʊ, GA, American)
+            if (!usIpa && (reg.includes('us') || reg.includes('american') || reg.includes('ga') || ipa.includes('oʊ'))) {
+                usIpa = ipa;
+            }
+            // Nhận diện UK qua region hoặc đặc trưng nguyên âm UK (Received, RP, British, əʊ, ɒ)
+            if (!ukIpa && (reg.includes('uk') || reg.includes('received') || reg.includes('rp') || reg.includes('british') || ipa.includes('əʊ') || ipa.includes('ɒ'))) {
+                ukIpa = ipa;
+            }
+        }
+
+        // Tách theo đặc trưng /æ/ (US) vs /ɑː/ (UK) (như class, pass, dance, ask, bath, fast)
+        if (!usIpa || !ukIpa) {
+            for (const p of rawPronunciations) {
+                if (!usIpa && p.ipa.includes('æ') && !p.ipa.includes('ɑː')) {
+                    usIpa = p.ipa;
+                }
+                if (!ukIpa && p.ipa.includes('ɑː') && !p.ipa.includes('æ')) {
+                    ukIpa = p.ipa;
+                }
+            }
+        }
+
+        const availableIpas = rawPronunciations.map(p => p.ipa).filter(Boolean);
+        if (availableIpas.length > 0) {
+            if (!usIpa && !ukIpa) {
+                if (availableIpas.length >= 2 && availableIpas[0] !== availableIpas[1]) {
+                    if (availableIpas[0].includes('ɑː') || availableIpas[0].includes('ɒ')) {
+                        ukIpa = availableIpas[0];
+                        usIpa = availableIpas[1];
+                    } else if (availableIpas[1].includes('ɑː') || availableIpas[1].includes('ɒ')) {
+                        ukIpa = availableIpas[1];
+                        usIpa = availableIpas[0];
+                    } else {
+                        usIpa = availableIpas[0];
+                        ukIpa = availableIpas[1];
+                    }
+                } else {
+                    usIpa = availableIpas[0];
+                    ukIpa = availableIpas[0];
+                }
+            } else if (!usIpa && ukIpa) {
+                const other = availableIpas.find(ipa => ipa !== ukIpa);
+                usIpa = other || ukIpa;
+            } else if (usIpa && !ukIpa) {
+                const other = availableIpas.find(ipa => ipa !== usIpa);
+                ukIpa = other || usIpa;
+            }
+        }
+    }
+
+    // 3. Nếu vẫn thiếu một trong 2 hoặc cả hai, thử tìm theo từ gốc (base lemma)
+    if (!usIpa || !ukIpa) {
+        const lemmas = getLemmas(cleanWord);
+        for (const item of lemmas) {
+            if (item.lemma.toLowerCase() === cleanWord) continue;
+            const baseFallback = getEnglishPhoneticFallback(item.lemma);
+            if (baseFallback && baseFallback.length > 0) {
+                const usFound = baseFallback.find(p => p.region === 'US' || p.region?.includes('US'));
+                const ukFound = baseFallback.find(p => p.region === 'UK' || p.region?.includes('UK'));
+                if (!usIpa && usFound) usIpa = usFound.ipa;
+                if (!ukIpa && ukFound) ukIpa = ukFound.ipa;
+            }
+        }
+    }
+
+    const finalUsIpa = cleanIpa(usIpa, cleanWord);
+    const finalUkIpa = cleanIpa(ukIpa || usIpa, cleanWord);
+
+    return [
+        {
+            region: 'US',
+            ipa: finalUsIpa,
+            phonetic: finalUsIpa,
+            audio: usAudio
+        },
+        {
+            region: 'UK',
+            ipa: finalUkIpa,
+            phonetic: finalUkIpa,
+            audio: ukAudio
+        }
+    ];
+}
+
+/**
+ * Đảm bảo mọi kết quả tiếng Anh luôn có ĐÚNG 2 phát âm (US và UK) với audio và IPA bọc chuẩn / /
+ */
+export function normalizeResultPronunciations(lookupRes: MultiLookupResult): MultiLookupResult {
+    if (!lookupRes.exists || !lookupRes.results) return lookupRes;
+
+    const hasEn = lookupRes.results.some(r => r.lang_code === 'en');
+    const isNumberOrLatin = /^[a-zA-Z0-9\-']+$/.test(lookupRes.word.trim());
+
+    let enPronAssigned = false;
+
+    const normalizedResults = lookupRes.results.map((res, index) => {
+        let relations = [...(res.relations || [])];
+        if (res.lang_code === 'en') {
+            const extraThesaurus = getSynonymsAndAntonyms(lookupRes.word);
+            for (const item of extraThesaurus) {
+                if (!relations.some(r => r.related_word.toLowerCase() === item.related_word.toLowerCase() && r.relation_type === item.relation_type)) {
+                    relations.push(item);
+                }
+            }
+        }
+
+        const synonyms = Array.from(new Set(
+            relations.filter(r => r.relation_type === 'Đồng nghĩa').map(r => r.related_word)
+        ));
+        const antonyms = Array.from(new Set(
+            relations.filter(r => r.relation_type === 'Trái nghĩa').map(r => r.related_word)
+        ));
+
+        let updatedPronunciations = res.pronunciations;
+        let updatedAudio = res.audio;
+
+        if (res.lang_code === 'en') {
+            enPronAssigned = true;
+            updatedAudio = `/api/v1/tts?word=${encodeURIComponent(lookupRes.word)}&lang=en`;
+            updatedPronunciations = formatUsUkPronunciations(lookupRes.word, res.pronunciations);
+        } else if (hasEn) {
+            // Khi đã có tiếng Anh: không trả phiên âm cho các ngôn ngữ phụ (Pháp, Đức, VN...)
+            // để đảm bảo mỗi từ CHỈ trả ĐÚNG 2 phiên âm US và UK
+            updatedPronunciations = [];
+        } else if (isNumberOrLatin && !enPronAssigned && index === 0) {
+            // Từ chữ cái Latinh hoặc chữ số: luôn trả ĐÚNG 2 phiên âm US và UK
+            enPronAssigned = true;
+            updatedAudio = `/api/v1/tts?word=${encodeURIComponent(lookupRes.word)}&lang=en`;
+            updatedPronunciations = formatUsUkPronunciations(lookupRes.word, res.pronunciations);
+        } else if (isNumberOrLatin) {
+            updatedPronunciations = [];
+        } else {
+            updatedPronunciations = res.pronunciations.map(p => {
+                const cleaned = cleanIpa(p.ipa, lookupRes.word);
+                return {
+                    ...p,
+                    ipa: cleaned,
+                    phonetic: cleaned
+                };
+            });
+        }
+
+        return {
+            ...res,
+            audio: updatedAudio,
+            pronunciations: updatedPronunciations,
+            relations,
+            synonyms,
+            antonyms
+        };
+    });
+
+    return {
+        ...lookupRes,
+        results: normalizedResults
+    };
+}
+
 function getWordData(wordId: number, wordText: string, langCode: string): LanguageResult {
     const { getMeaningsStmt, getPronunciationsStmt, getTranslationsStmt, getRelationsStmt } = getStatements();
 
@@ -356,8 +619,13 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
         source: string | null;
     }[];
 
-    // Lọc bỏ các định nghĩa rác, rỗng hoặc chỉ có dấu chấm đơn '.'
-    const validMeanings = meanings.filter(m => m.definition && m.definition.trim() !== '.' && m.definition.trim() !== '');
+    // Lọc bỏ các định nghĩa rác, rỗng, placeholder hoặc chỉ có dấu chấm đơn '.'
+    const validMeanings = meanings
+        .map(m => ({
+            ...m,
+            definition: sanitizeDefinition(m.definition)
+        }))
+        .filter(m => m.definition.length > 0);
 
     const updatedMeanings: DictionaryMeaning[] = validMeanings.map((meaning) => {
         let links: string[] = [];
@@ -383,7 +651,10 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
         };
     });
 
-    const pronunciations = getPronunciationsStmt!.all(wordId) as DictionaryPronunciation[];
+    let pronunciations = getPronunciationsStmt!.all(wordId) as DictionaryPronunciation[];
+    if (langCode === 'en') {
+        pronunciations = formatUsUkPronunciations(wordText, pronunciations);
+    }
     const translations = getTranslationsStmt!.all(wordId) as DictionaryTranslation[];
     const relations = getRelationsStmt!.all(wordId) as DictionaryRelation[];
 
@@ -398,14 +669,36 @@ function getWordData(wordId: number, wordText: string, langCode: string): Langua
         relation_type: RELATION_LABELS[rel.relation_type] ?? rel.relation_type
     }));
 
+    if (langCode === 'en') {
+        const extraThesaurus = getSynonymsAndAntonyms(wordText);
+        for (const item of extraThesaurus) {
+            if (!updatedRelations.some(r => r.related_word.toLowerCase() === item.related_word.toLowerCase() && r.relation_type === item.relation_type)) {
+                updatedRelations.push(item);
+            }
+        }
+    }
+
+    const synonyms = Array.from(new Set(
+        updatedRelations.filter(r => r.relation_type === 'Đồng nghĩa').map(r => r.related_word)
+    ));
+    const antonyms = Array.from(new Set(
+        updatedRelations.filter(r => r.relation_type === 'Trái nghĩa').map(r => r.related_word)
+    ));
+
+    const audioUrl = (langCode === 'en')
+        ? `/api/v1/tts?word=${encodeURIComponent(wordText)}&lang=en&accent=us`
+        : `/api/v1/tts?word=${encodeURIComponent(wordText)}&lang=${langCode}`;
+
     return {
         lang_code: langCode,
         lang_name: LANG_LABELS[langCode] ?? langCode,
-        audio: `/api/v1/tts?word=${encodeURIComponent(wordText)}&lang=${langCode}`,
+        audio: audioUrl,
         meanings: updatedMeanings,
         pronunciations,
         translations: updatedTranslations,
-        relations: updatedRelations
+        relations: updatedRelations,
+        synonyms,
+        antonyms
     };
 }
 
@@ -489,8 +782,8 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
  */
 function isMetaGrammarDefinition(def: string): boolean {
     const trimmed = def.trim().toLowerCase();
-    return /^(số nhiều|dạng quá khứ|quá khứ|phân từ|dạng phân từ|động từ chia|dạng ngôi thứ|so sánh hơn|so sánh nhất|danh động từ)/i.test(trimmed) ||
-           /^(dạng\s+)?(quá khứ|phân từ|ngôi thứ ba|số nhiều).+của\s+[a-z]+/i.test(trimmed);
+    return /^(số nhiều|dạng quá khứ|động từ quá khứ|quá khứ|thì quá khứ|phân từ|dạng phân từ|động từ chia|dạng ngôi thứ|so sánh hơn|so sánh nhất|danh động từ)/i.test(trimmed) ||
+           /^(dạng\s+|động từ\s+)?(quá khứ|phân từ|ngôi thứ ba|số nhiều|chia thì).+của\s+[a-z]+/i.test(trimmed);
 }
 
 /**
@@ -503,13 +796,24 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
         return currentResult;
     }
 
+    let relations = [...currentResult.relations];
+    let pronunciations = currentResult.pronunciations;
+    let meanings = [...currentResult.meanings];
+    let hasEnrichedMeanings = false;
+
+    // 1. Luôn bổ sung quan hệ Gốc từ cho tất cả các lemma hợp lệ
+    for (const item of lemmas) {
+        if (item.lemma.toLowerCase() === lowerWord) continue;
+        if (!relations.some(rel => rel.related_word.toLowerCase() === item.lemma.toLowerCase() && rel.relation_type === 'Gốc từ')) {
+            relations.unshift({
+                related_word: item.lemma,
+                relation_type: 'Gốc từ'
+            });
+        }
+    }
+
     const hasMetaDef = currentResult.meanings.some(m => isMetaGrammarDefinition(m.definition));
     const isPoorDefs = currentResult.meanings.length <= 1;
-
-    // Nếu không có định nghĩa meta và đã có nhiều hơn 1 định nghĩa, không cần can thiệp
-    if (!hasMetaDef && !isPoorDefs) {
-        return currentResult;
-    }
 
     for (const item of lemmas) {
         if (item.lemma.toLowerCase() === lowerWord) continue;
@@ -518,16 +822,22 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
         if (!baseResult.exists || baseResult.results.length === 0) continue;
 
         const baseEnglish = baseResult.results.find(res => res.lang_code === 'en');
-        if (!baseEnglish || baseEnglish.meanings.length === 0) continue;
+        if (!baseEnglish) continue;
+
+        // Kế thừa quan hệ (đồng nghĩa, trái nghĩa, liên quan) từ từ gốc nếu từ hiện tại chưa có
+        for (const rel of baseEnglish.relations) {
+            if (rel.relation_type === 'Gốc từ') continue;
+            if (rel.related_word.toLowerCase() === lowerWord) continue;
+            if (!relations.some(r => r.related_word.toLowerCase() === rel.related_word.toLowerCase() && r.relation_type === rel.relation_type)) {
+                relations.push(rel);
+            }
+        }
 
         // Nếu từ hiện tại có định nghĩa meta hoặc có quá ít nghĩa so với từ gốc
-        if (hasMetaDef || (isPoorDefs && baseEnglish.meanings.length > currentResult.meanings.length)) {
-            // Lọc bỏ các định nghĩa chỉ là meta sentence
-            const nonMetaCurrentMeanings = currentResult.meanings.filter(m => !isMetaGrammarDefinition(m.definition));
-
-            // Tránh trùng lặp định nghĩa
+        if ((hasMetaDef || isPoorDefs) && !hasEnrichedMeanings && baseEnglish.meanings.length > 0) {
+            hasEnrichedMeanings = true;
             const seenDefs = new Set<string>();
-            nonMetaCurrentMeanings.forEach(m => seenDefs.add(m.definition.trim().toLowerCase()));
+            meanings.forEach(m => seenDefs.add(m.definition.trim().toLowerCase()));
 
             const addedBaseMeanings: DictionaryMeaning[] = [];
             for (const bm of baseEnglish.meanings) {
@@ -542,40 +852,21 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
                 }
             }
 
-            const noteMeaning: DictionaryMeaning = {
-                definition: `${item.explanation} Hiển thị nghĩa của từ gốc "${item.lemma}":`,
-                definition_lang: 'vi',
-                example: null,
-                pos: 'Dạng biến thể',
-                sub_pos: item.posType === 'noun' ? 'Số nhiều' : item.posType === 'verb' ? 'Chia thì' : 'So sánh',
-                source: 'Lemmatizer NLP',
-                links: [item.lemma]
-            };
+            meanings = [...meanings, ...addedBaseMeanings];
 
             // Kế thừa phiên âm nếu từ hiện tại chưa có
-            const pronunciations = currentResult.pronunciations.length > 0 
-                ? currentResult.pronunciations 
-                : baseEnglish.pronunciations;
-
-            // Bổ sung quan hệ gốc từ
-            const relations = [...currentResult.relations];
-            if (!relations.some(rel => rel.related_word.toLowerCase() === item.lemma.toLowerCase())) {
-                relations.unshift({
-                    related_word: item.lemma,
-                    relation_type: 'Gốc từ'
-                });
+            if (pronunciations.length === 0) {
+                pronunciations = baseEnglish.pronunciations;
             }
-
-            return {
-                ...currentResult,
-                meanings: [noteMeaning, ...nonMetaCurrentMeanings, ...addedBaseMeanings],
-                pronunciations,
-                relations
-            };
         }
     }
 
-    return currentResult;
+    return {
+        ...currentResult,
+        meanings,
+        pronunciations,
+        relations
+    };
 }
 
 /**
@@ -593,51 +884,36 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                 ? customEntry.results.filter(r => r.lang_code === lang)
                 : customEntry.results;
             if (filteredResults.length > 0) {
-                return {
+                return normalizeResultPronunciations({
                     exists: true,
                     word: customEntry.word,
                     results: filteredResults
-                };
+                });
             }
         }
 
         // Nếu là dạng aliasTo (chuyển hướng lấy nghĩa từ từ gốc, ví dụ classes -> class, a.m. -> am)
         const targetAlias = customEntry.aliasTo;
         if (targetAlias) {
-            const targetCustom = getCustomWord(targetAlias);
-            const baseResult = (targetCustom && targetCustom.results && targetCustom.results.length > 0)
-                ? { exists: true, word: targetCustom.word, results: lang ? targetCustom.results.filter(r => r.lang_code === lang) : targetCustom.results }
-                : lookupDirectFromDb(targetAlias, lang);
+            const baseResult = lookupWordSync(targetAlias, lang);
             if (baseResult.exists) {
                 const results = baseResult.results.map(r => {
-                    if (r.lang_code === 'en' || !lang) {
-                        const noteMeaning: DictionaryMeaning = {
-                            definition: customEntry.note || `Dạng biến thể của từ "${targetAlias}".`,
-                            definition_lang: 'vi',
-                            example: null,
-                            pos: 'Dạng biến thể',
-                            sub_pos: 'Biến thể ngữ pháp',
-                            source: 'Custom',
-                            links: [targetAlias]
-                        };
-                        return {
-                            ...r,
-                            audio: `/api/v1/tts?word=${encodeURIComponent(customEntry.word)}&lang=${r.lang_code}`,
-                            pronunciations: (customEntry.pronunciations && customEntry.pronunciations.length > 0) ? customEntry.pronunciations : r.pronunciations,
-                            meanings: [noteMeaning, ...r.meanings],
-                            relations: [
-                                { related_word: targetAlias, relation_type: 'Gốc từ' },
-                                ...r.relations
-                            ]
-                        };
+                    const relations = [...r.relations];
+                    if (!relations.some(rel => rel.related_word.toLowerCase() === targetAlias.toLowerCase() && rel.relation_type === 'Gốc từ')) {
+                        relations.unshift({
+                            related_word: targetAlias,
+                            relation_type: 'Gốc từ'
+                        });
                     }
-                    return r;
+                    return {
+                        ...r,
+                        relations
+                    };
                 });
-                return {
-                    exists: true,
-                    word: customEntry.word,
+                return normalizeResultPronunciations({
+                    ...baseResult,
                     results
-                };
+                });
             }
         }
     }
@@ -647,11 +923,11 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     if (placeOrNameResults && placeOrNameResults.length > 0) {
         const filtered = lang ? placeOrNameResults.filter(r => r.lang_code === lang) : placeOrNameResults;
         if (filtered.length > 0) {
-            return {
+            return normalizeResultPronunciations({
                 exists: true,
                 word: cleanWord,
                 results: filtered
-            };
+            });
         }
     }
 
@@ -661,24 +937,24 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
         const accentedTarget = VN_UNACCENTED_PLACES[lowerClean];
         const accentedDbResult = lookupDirectFromDb(accentedTarget, lang);
         if (accentedDbResult.exists) {
-            return {
+            return normalizeResultPronunciations({
                 exists: true,
                 word: accentedDbResult.word,
                 results: accentedDbResult.results.map(r => ({
                     ...r,
                     audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`
                 }))
-            };
+            });
         }
         const placeRes = getPlaceOrName(accentedTarget);
         if (placeRes && placeRes.length > 0) {
             const filtered = lang ? placeRes.filter(r => r.lang_code === lang) : placeRes;
             if (filtered.length > 0) {
-                return {
+                return normalizeResultPronunciations({
                     exists: true,
                     word: accentedTarget,
                     results: filtered
-                };
+                });
             }
         }
     }
@@ -704,19 +980,10 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                 if (baseResult.exists && baseResult.results.length > 0) {
                     const baseEn = baseResult.results.find(r => r.lang_code === 'en');
                     if (baseEn && baseEn.meanings.length > 0) {
-                        const noteMeaning: DictionaryMeaning = {
-                            definition: `${item.explanation} Hiển thị nghĩa của từ gốc "${item.lemma}":`,
-                            definition_lang: 'vi',
-                            example: null,
-                            pos: 'Dạng biến thể',
-                            sub_pos: item.posType === 'noun' ? 'Số nhiều' : item.posType === 'verb' ? 'Chia thì' : 'So sánh',
-                            source: 'Lemmatizer NLP',
-                            links: [item.lemma]
-                        };
                         const lemmaEnResult: LanguageResult = {
                             ...baseEn,
-                            audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=en`,
-                            meanings: [noteMeaning, ...baseEn.meanings],
+                            audio: `/api/v1/tts?word=${encodeURIComponent(item.lemma)}&lang=en`,
+                            meanings: [...baseEn.meanings],
                             relations: [
                                 { related_word: item.lemma, relation_type: 'Gốc từ' },
                                 ...baseEn.relations
@@ -729,10 +996,10 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
             }
         }
 
-        return {
+        return normalizeResultPronunciations({
             ...dbResult,
             results: enrichedResults
-        };
+        });
     }
 
     // 2.1. Tra cứu Số (Numbers Engine: 0, 1, 100, 2024, 3.14, 1st, 2nd, IV, X...)
@@ -740,11 +1007,11 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     if (numberResults && numberResults.length > 0) {
         const filtered = lang ? numberResults.filter(r => r.lang_code === lang) : numberResults;
         if (filtered.length > 0) {
-            return {
+            return normalizeResultPronunciations({
                 exists: true,
                 word: cleanWord,
                 results: filtered
-            };
+            });
         }
     }
 
@@ -753,11 +1020,11 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     if (timeResults && timeResults.length > 0) {
         const filtered = lang ? timeResults.filter(r => r.lang_code === lang) : timeResults;
         if (filtered.length > 0) {
-            return {
+            return normalizeResultPronunciations({
                 exists: true,
                 word: cleanWord,
                 results: filtered
-            };
+            });
         }
     }
 
@@ -768,7 +1035,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
         if (baseResult.exists) {
             const results = baseResult.results.map(r => {
                 const noteMeaning: DictionaryMeaning = {
-                    definition: `${contraction.description} (${contraction.expansion}). Hiển thị nghĩa của từ gốc "${contraction.baseWord}":`,
+                    definition: `${contraction.description} (Dạng đầy đủ: ${contraction.expansion}).`,
                     definition_lang: 'vi',
                     example: null,
                     pos: 'Từ viết tắt',
@@ -786,24 +1053,24 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                     ]
                 };
             });
-            return {
+            return normalizeResultPronunciations({
                 exists: true,
                 word: cleanWord,
                 results
-            };
+            });
         }
     }
 
-    // 3.1. Tra cứu dạng sở hữu cách tiếng Anh (Possessive: dog's -> dog, teachers' -> teacher)
+    // 3.1. Tra cứu dạng sở hữu cách tiếng Anh (Possessive: dog's -> dog, teachers' -> teacher, Quan's -> Quan)
     const possessive = getPossessive(cleanWord);
     if (possessive) {
         let baseResult = lookupDirectFromDb(possessive.base, lang || 'en');
         if (!baseResult.exists) {
-            const placeRes = getPlaceOrName(possessive.base);
+            const placeRes = getPlaceOrName(possessive.base) || getPlaceOrName(possessive.displayBase);
             if (placeRes && placeRes.length > 0) {
                 baseResult = {
                     exists: true,
-                    word: possessive.base,
+                    word: possessive.displayBase,
                     results: placeRes
                 };
             }
@@ -825,98 +1092,117 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
                 baseResult = singularResult;
             }
         }
+
+        // Tìm kiếm base trong DB ở mọi ngôn ngữ khác (ví dụ: 'quan' có trong tiếng Việt)
+        let anyLangDbResult: MultiLookupResult | null = null;
+        if (!baseResult.exists) {
+            const dbAny = lookupDirectFromDb(possessive.base);
+            if (dbAny.exists) {
+                anyLangDbResult = dbAny;
+            }
+        }
+
         if (baseResult.exists) {
             const results = baseResult.results.map(r => {
                 const noteMeaning: DictionaryMeaning = {
-                    definition: `${possessive.explanation} Hiển thị nghĩa của từ gốc "${possessive.base}":`,
+                    definition: `${possessive.explanation}`,
                     definition_lang: 'vi',
-                    example: null,
+                    example: possessive.example,
                     pos: 'Dạng sở hữu cách',
                     sub_pos: 'Sở hữu cách (Possessive case)',
                     source: 'Possessive Engine',
-                    links: [possessive.base]
+                    links: [possessive.displayBase]
                 };
                 return {
                     ...r,
                     audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
                     meanings: [noteMeaning, ...r.meanings],
                     relations: [
-                        { related_word: possessive.base, relation_type: 'Gốc từ' },
+                        { related_word: possessive.displayBase, relation_type: 'Gốc từ / Tên riêng' },
                         ...r.relations
                     ]
                 };
             });
-            return {
+            return normalizeResultPronunciations({
                 exists: true,
                 word: cleanWord,
                 results
+            });
+        } else {
+            // Khi từ gốc là tên riêng hoặc từ chưa có trong DB tiếng Anh (Quan's, Quân's, Alex's, Sarah's...)
+            const noteMeaning: DictionaryMeaning = {
+                definition: possessive.explanation,
+                definition_lang: 'vi',
+                example: possessive.example,
+                pos: 'Dạng sở hữu cách',
+                sub_pos: 'Sở hữu cách (Possessive case)',
+                source: 'Possessive Engine',
+                links: [possessive.displayBase]
             };
+
+            const enResult: LanguageResult = {
+                lang_code: 'en',
+                lang_name: 'Tiếng Anh',
+                audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=en`,
+                meanings: [noteMeaning],
+                pronunciations: formatUsUkPronunciations(cleanWord),
+                translations: [],
+                relations: [
+                    { related_word: possessive.displayBase, relation_type: 'Tên riêng / Từ gốc' }
+                ]
+            };
+
+            const combined: LanguageResult[] = [enResult];
+            if (anyLangDbResult && anyLangDbResult.results.length > 0) {
+                for (const r of anyLangDbResult.results) {
+                    if (r.lang_code !== 'en') {
+                        combined.push(r);
+                    }
+                }
+            }
+
+            return normalizeResultPronunciations({
+                exists: true,
+                word: cleanWord,
+                results: combined
+            });
         }
     }
 
     // 3.2. Tra cứu biến thể chính tả Anh - Mỹ và từ ghép gạch nối (color <-> colour, well-known <-> well known)
     const spellingVariants = getSpellingVariants(cleanWord);
     for (const variant of spellingVariants) {
+        if (variant.toLowerCase() === cleanWord.toLowerCase()) continue;
         const variantResult = lookupDirectFromDb(variant, lang || 'en');
-        if (variantResult.exists) {
-            const results = variantResult.results.map(r => {
-                const noteMeaning: DictionaryMeaning = {
-                    definition: `Biến thể chính tả (Anh - Mỹ hoặc từ ghép) tương đương với "${variant}". Hiển thị nghĩa:`,
-                    definition_lang: 'vi',
-                    example: null,
-                    pos: 'Biến thể chính tả',
-                    sub_pos: 'US/UK Spelling Variant',
-                    source: 'Spelling Engine',
-                    links: [variant]
-                };
-                return {
-                    ...r,
-                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
-                    meanings: [noteMeaning, ...r.meanings],
-                    relations: [
-                        { related_word: variant, relation_type: 'Từ chuẩn' },
-                        ...r.relations
-                    ]
-                };
-            });
-            return {
-                exists: true,
-                word: cleanWord,
-                results
-            };
+        if (variantResult.exists && variantResult.results.length > 0) {
+            return normalizeResultPronunciations(variantResult);
         }
     }
 
     // 4. Tra cứu tự động hình thái từ (Lemmatizer NLP Engine: bất quy tắc, số nhiều, chia thì, so sánh)
+    // Trả về trực tiếp dữ liệu từ gốc (class, box, go, mouse, happy...) sạch sẽ, chuẩn xác
     const lemmas = getLemmas(cleanWord);
     for (const item of lemmas) {
+        if (item.lemma.toLowerCase() === cleanWord.toLowerCase()) continue;
         const lemmaResult = lookupDirectFromDb(item.lemma, lang || 'en');
-        if (lemmaResult.exists) {
+        if (lemmaResult.exists && lemmaResult.results.length > 0) {
             const results = lemmaResult.results.map(r => {
-                const noteMeaning: DictionaryMeaning = {
-                    definition: `${item.explanation} Hiển thị nghĩa của từ nguyên mẫu "${item.lemma}":`,
-                    definition_lang: 'vi',
-                    example: null,
-                    pos: 'Dạng biến thể',
-                    sub_pos: item.posType === 'noun' ? 'Số nhiều' : item.posType === 'verb' ? 'Chia thì' : 'So sánh',
-                    source: 'Lemmatizer NLP',
-                    links: [item.lemma]
-                };
+                const relations = [...r.relations];
+                if (!relations.some(rel => rel.related_word.toLowerCase() === item.lemma.toLowerCase() && rel.relation_type === 'Gốc từ')) {
+                    relations.unshift({
+                        related_word: item.lemma,
+                        relation_type: 'Gốc từ'
+                    });
+                }
                 return {
                     ...r,
-                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
-                    meanings: [noteMeaning, ...r.meanings],
-                    relations: [
-                        { related_word: item.lemma, relation_type: 'Gốc từ' },
-                        ...r.relations
-                    ]
+                    relations
                 };
             });
-            return {
-                exists: true,
-                word: cleanWord,
+            return normalizeResultPronunciations({
+                ...lemmaResult,
                 results
-            };
+            });
         }
     }
 
@@ -943,33 +1229,26 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     }
 
     for (const lemma of candidateLemmas) {
+        if (lemma.toLowerCase() === cleanWord.toLowerCase()) continue;
         const lemmaResult = lookupDirectFromDb(lemma, lang || 'en');
-        if (lemmaResult.exists) {
+        if (lemmaResult.exists && lemmaResult.results.length > 0) {
             const results = lemmaResult.results.map(r => {
-                const noteMeaning: DictionaryMeaning = {
-                    definition: `Dạng biến thể / số nhiều / chia thì của "${lemma}". Hiển thị nghĩa của từ nguyên mẫu:`,
-                    definition_lang: 'vi',
-                    example: null,
-                    pos: 'Dạng biến thể',
-                    sub_pos: 'Biến thể ngữ pháp',
-                    source: 'Hệ thống tự động',
-                    links: [lemma]
-                };
+                const relations = [...r.relations];
+                if (!relations.some(rel => rel.related_word.toLowerCase() === lemma.toLowerCase() && rel.relation_type === 'Gốc từ')) {
+                    relations.unshift({
+                        related_word: lemma,
+                        relation_type: 'Gốc từ'
+                    });
+                }
                 return {
                     ...r,
-                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
-                    meanings: [noteMeaning, ...r.meanings],
-                    relations: [
-                        { related_word: lemma, relation_type: 'Gốc từ' },
-                        ...r.relations
-                    ]
+                    relations
                 };
             });
-            return {
-                exists: true,
-                word: cleanWord,
+            return normalizeResultPronunciations({
+                ...lemmaResult,
                 results
-            };
+            });
         }
     }
 
@@ -983,33 +1262,26 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     else if (lowerWord.startsWith('non') && lowerWord.length > 5) prefixCandidates.push({ prefix: 'non-', root: lowerWord.slice(3) });
 
     for (const cand of prefixCandidates) {
+        if (cand.root.toLowerCase() === cleanWord.toLowerCase()) continue;
         const rootResult = lookupDirectFromDb(cand.root, lang || 'en');
-        if (rootResult.exists) {
+        if (rootResult.exists && rootResult.results.length > 0) {
             const results = rootResult.results.map(r => {
-                const noteMeaning: DictionaryMeaning = {
-                    definition: `Từ ghép với tiền tố phủ định "${cand.prefix}" mang nghĩa phủ định hoặc trái ngược với "${cand.root}". Hiển thị nghĩa của từ gốc "${cand.root}":`,
-                    definition_lang: 'vi',
-                    example: null,
-                    pos: 'Từ mang tiền tố',
-                    sub_pos: 'Tiền tố phủ định (Negative Prefix)',
-                    source: 'Prefix Engine',
-                    links: [cand.root]
-                };
+                const relations = [...r.relations];
+                if (!relations.some(rel => rel.related_word.toLowerCase() === cand.root.toLowerCase() && rel.relation_type === 'Gốc từ')) {
+                    relations.unshift({
+                        related_word: cand.root,
+                        relation_type: 'Gốc từ'
+                    });
+                }
                 return {
                     ...r,
-                    audio: `/api/v1/tts?word=${encodeURIComponent(cleanWord)}&lang=${r.lang_code}`,
-                    meanings: [noteMeaning, ...r.meanings],
-                    relations: [
-                        { related_word: cand.root, relation_type: 'Từ gốc' },
-                        ...r.relations
-                    ]
+                    relations
                 };
             });
-            return {
-                exists: true,
-                word: cleanWord,
+            return normalizeResultPronunciations({
+                ...rootResult,
                 results
-            };
+            });
         }
     }
 
@@ -1019,10 +1291,7 @@ export function lookupWordSync(word: string, lang?: string): MultiLookupResult {
     if (stripped && stripped !== cleanWord && stripped.length >= 1) {
         const retryResult = lookupWordSync(stripped, lang);
         if (retryResult.exists) {
-            return {
-                ...retryResult,
-                word: cleanWord
-            };
+            return normalizeResultPronunciations(retryResult);
         }
     }
 
@@ -1049,24 +1318,24 @@ export async function lookupWord(word: string, lang?: string): Promise<MultiLook
                 if (wiktionaryRes && wiktionaryRes.exists && wiktionaryRes.results.length > 0) {
                     const enLangResult = wiktionaryRes.results.find(r => r.lang_code === 'en');
                     if (enLangResult && enLangResult.meanings.length > 0) {
-                        return {
+                        return normalizeResultPronunciations({
                             ...syncResult,
                             results: [enLangResult, ...syncResult.results]
-                        };
+                        });
                     }
                 }
             } catch (e) {
                 console.error('Wiktionary enrichment error:', e);
             }
         }
-        return syncResult;
+        return normalizeResultPronunciations(syncResult);
     }
 
     // 1. Tra cứu Wiktionary & Từ điển Mở trước (từ điển ngôn ngữ, từ loại Noun/Verb/Adj/Adv, từ ghép, bản dịch...)
     try {
         const wiktionaryResult = await lookupWiktionaryFallback(word, lang);
         if (wiktionaryResult && wiktionaryResult.exists && wiktionaryResult.results.length > 0) {
-            return wiktionaryResult;
+            return normalizeResultPronunciations(wiktionaryResult);
         }
     } catch (e) {
         console.error('Wiktionary fallback error:', e);
@@ -1076,13 +1345,13 @@ export async function lookupWord(word: string, lang?: string): Promise<MultiLook
     try {
         const wikiResult = await lookupWikiFallback(word, lang);
         if (wikiResult && wikiResult.exists && wikiResult.results.length > 0) {
-            return wikiResult;
+            return normalizeResultPronunciations(wikiResult);
         }
     } catch (e) {
         console.error('Wikipedia fallback error:', e);
     }
 
-    return syncResult;
+    return normalizeResultPronunciations(syncResult);
 }
 
 // Prepared statement for suggestions (lazy loaded)
@@ -1119,9 +1388,9 @@ export function getSuggestions(prefix: string, limit: number = 8, lang?: string)
             .slice(0, limit)
         : [];
 
-    const placesSuggestions = (!lang || lang === 'vi' || lang === 'en')
+    const placesSuggestions = (!lang || lang === 'vi')
         ? getPlacesSuggestions(cleanPrefix, limit)
-        : [];
+        : getPlacesSuggestions(cleanPrefix, limit).filter(p => !/[à-ỹÀ-Ỹ]/.test(p));
 
     const database = getDb();
     const normalizedPrefix = normalizeVietnamese(prefix.normalize('NFC').toLowerCase());

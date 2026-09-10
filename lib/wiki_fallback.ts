@@ -1,4 +1,5 @@
 import { MultiLookupResult, LanguageResult } from './dictionary';
+import { getSynonymsAndAntonyms, getThesaurusEntry } from './synonyms_antonyms';
 
 interface WikiSummaryResponse {
     type?: string;
@@ -133,7 +134,9 @@ export async function lookupWikiFallback(query: string, preferredLang?: string):
                             ],
                             pronunciations: [],
                             translations: [],
-                            relations: []
+                            relations: lang === 'en' ? getSynonymsAndAntonyms(clean) : [],
+                            synonyms: lang === 'en' ? (getThesaurusEntry(clean)?.synonyms || []) : [],
+                            antonyms: lang === 'en' ? (getThesaurusEntry(clean)?.antonyms || []) : []
                         };
 
                         const returnWord = clean.toLowerCase() === (data.title || '').toLowerCase() ? clean : (data.title || clean);

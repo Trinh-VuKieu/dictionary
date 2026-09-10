@@ -245,9 +245,8 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
                     }
                 ],
                 pronunciations: [
-                    { ipa: "/æm/", region: "Động từ (nhấn mạnh)" },
-                    { ipa: "/əm/", region: "Động từ (dạng yếu)" },
-                    { ipa: "/ˌeɪ ˈem/", region: "Giờ giấc (A.M.)" }
+                    { ipa: "/æm/", region: "US" },
+                    { ipa: "/æm/", region: "UK" }
                 ],
                 translations: [
                     { lang_code: "vi", lang_name: "Tiếng Việt", translation: "thì, là, ở" },
@@ -599,7 +598,8 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
                     }
                 ],
                 pronunciations: [
-                    { ipa: "/ˌpiː ˈem/", region: "US/UK" }
+                    { ipa: "/ˌpiː ˈem/", region: "US" },
+                    { ipa: "/ˌpiː ˈem/", region: "UK" }
                 ],
                 translations: [
                     { lang_code: "vi", lang_name: "Tiếng Việt", translation: "giờ chiều/tối (sau 12h trưa) / Thủ tướng" }
@@ -1822,6 +1822,274 @@ export const CUSTOM_WORDS: Record<string, CustomWordEntry> = {
             translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "thiết bị kỹ thuật số cá nhân" }],
             relations: []
         }]
+    },
+
+    // --- CÁC THUẬT NGỮ CÔNG NGHỆ, VIẾT TẮT VÀ ĐỜI SỐNG HIỆN ĐẠI BỔ SUNG ---
+    "wifi": {
+        word: "wifi",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=wifi&lang=en",
+            meanings: [
+                { definition: "Mạng internet không dây (viết tắt của Wireless Fidelity), công nghệ cho phép các thiết bị như điện thoại, máy tính kết nối mạng không cần dây cáp.", definition_lang: "vi", example: "Is there free Wi-Fi in this coffee shop? / What is the Wi-Fi password?", pos: "Danh từ", sub_pos: "Công nghệ mạng", source: "Custom", links: ["internet", "network"] },
+                { definition: "Wireless local area network for connecting devices to the Internet.", definition_lang: "en", example: "Connect to the office Wi-Fi network.", pos: "Noun", sub_pos: "Networking", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˈwaɪ.faɪ/", region: "US" },
+                { ipa: "/ˈwaɪ.faɪ/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "mạng wifi, mạng không dây" }],
+            relations: [{ related_word: "wi-fi", relation_type: "Biến thể chính tả" }]
+        }]
+    },
+    "wi-fi": {
+        word: "wi-fi",
+        aliasTo: "wifi"
+    },
+
+    "app": {
+        word: "app",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=app&lang=en",
+            meanings: [
+                { definition: "Ứng dụng, phần mềm ứng dụng (thường dùng cho điện thoại di động thông minh hoặc máy tính bảng, viết tắt của 'application').", definition_lang: "vi", example: "Download the banking app from the App Store. / She installed a new language learning app.", pos: "Danh từ", sub_pos: "Công nghệ phần mềm", source: "Custom", links: ["application", "software"] },
+                { definition: "An application, especially as downloaded by a user to a mobile device.", definition_lang: "en", example: "There are millions of apps available.", pos: "Noun", sub_pos: "Software", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/æp/", region: "US" },
+                { ipa: "/æp/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "ứng dụng" }],
+            relations: [{ related_word: "application", relation_type: "Dạng đầy đủ" }]
+        }]
+    },
+    "apps": {
+        word: "apps",
+        aliasTo: "app"
+    },
+
+    "usb": {
+        word: "usb",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=usb&lang=en",
+            meanings: [
+                { definition: "Cổng kết nối chuẩn hoặc thiết bị lưu trữ dữ liệu cắm ngoài (viết tắt của Universal Serial Bus).", definition_lang: "vi", example: "Plug the USB flash drive into your computer. / A USB-C charging cable.", pos: "Danh từ", sub_pos: "Thiết bị phần cứng", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌjuː.esˈbiː/", region: "US" },
+                { ipa: "/ˌjuː.esˈbiː/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "cổng USB, ổ cứng USB" }],
+            relations: []
+        }]
+    },
+
+    "podcast": {
+        word: "podcast",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=podcast&lang=en",
+            meanings: [
+                { definition: "Chương trình phát thanh số, chuỗi các tập tệp âm thanh số có thể tải về hoặc nghe trực tuyến trên internet.", definition_lang: "vi", example: "I listen to an English learning podcast every morning.", pos: "Danh từ", sub_pos: "Truyền thông số", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˈpɑːd.kæst/", region: "US" },
+                { ipa: "/ˈpɒd.kɑːst/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "chương trình podcast" }],
+            relations: []
+        }]
+    },
+    "podcasts": {
+        word: "podcasts",
+        aliasTo: "podcast"
+    },
+
+    "ai": {
+        word: "ai",
+        results: [
+            {
+                lang_code: "en",
+                lang_name: "Tiếng Anh",
+                audio: "/api/v1/tts?word=ai&lang=en",
+                meanings: [
+                    { definition: "Trí tuệ nhân tạo (viết tắt của 'Artificial Intelligence'), công nghệ mô phỏng khả năng tư duy, học hỏi và giải quyết vấn đề của con người bằng hệ thống máy tính.", definition_lang: "vi", example: "Generative AI is changing how we work. / An AI-powered translation tool.", pos: "Danh từ", sub_pos: "Công nghệ thông tin", source: "Custom", links: ["machine learning"] },
+                    { definition: "Artificial Intelligence: the study and development of computer systems that can perform tasks normally requiring human intelligence.", definition_lang: "en", example: "Advances in AI technology.", pos: "Noun", sub_pos: "Technology", source: "Custom", links: [] }
+                ],
+                pronunciations: [
+                    { ipa: "/ˌeɪˈaɪ/", region: "US" },
+                    { ipa: "/ˌeɪˈaɪ/", region: "UK" }
+                ],
+                translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "trí tuệ nhân tạo (AI)" }],
+                relations: [{ related_word: "artificial intelligence", relation_type: "Dạng đầy đủ" }]
+            },
+            {
+                lang_code: "vi",
+                lang_name: "Tiếng Việt",
+                audio: "/api/v1/tts?word=ai&lang=vi",
+                meanings: [
+                    { definition: "Từ dùng để hỏi hoặc chỉ một người nào đó không xác định rõ danh tính (ví dụ: Ai đó? / Không ai biết).", definition_lang: "vi", example: "Ai là người phát minh ra máy tính?", pos: "Đại từ", sub_pos: "Nghi vấn / Bất định", source: "Custom", links: [] }
+                ],
+                pronunciations: [{ ipa: "/aːj˧˧/", region: "VN" }],
+                translations: [{ lang_code: "en", lang_name: "Tiếng Anh", translation: "who, someone, anyone" }],
+                relations: []
+            }
+        ]
+    },
+
+    "iot": {
+        word: "iot",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=iot&lang=en",
+            meanings: [
+                { definition: "Internet vạn vật (viết tắt của 'Internet of Things'), mạng lưới các thiết bị vật lý kết nối mạng để thu thập và trao đổi dữ liệu tự động.", definition_lang: "vi", example: "Smart home devices are a popular example of IoT.", pos: "Danh từ", sub_pos: "Công nghệ", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌaɪ.oʊˈtiː/", region: "US" },
+                { ipa: "/ˌaɪ.əʊˈtiː/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "Internet vạn vật" }],
+            relations: [{ related_word: "internet of things", relation_type: "Dạng đầy đủ" }]
+        }]
+    },
+
+    "eq": {
+        word: "eq",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=eq&lang=en",
+            meanings: [
+                { definition: "Chỉ số thông minh cảm xúc (viết tắt của 'Emotional Quotient'), khả năng thấu hiểu, quản lý và sử dụng cảm xúc tích cực.", definition_lang: "vi", example: "Leaders often require high EQ to manage teams effectively.", pos: "Danh từ", sub_pos: "Tâm lý học", source: "Custom", links: ["iq"] },
+                { definition: "Bộ cân bằng âm thanh (viết tắt của 'equalizer' trong xử lý âm thanh).", definition_lang: "vi", example: "Adjust the EQ to boost the bass.", pos: "Danh từ", sub_pos: "Âm thanh", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌiːˈkjuː/", region: "US" },
+                { ipa: "/ˌiːˈkjuː/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "chỉ số cảm xúc" }],
+            relations: [{ related_word: "iq", relation_type: "Đối lập / Đối chiếu" }]
+        }]
+    },
+
+    "btw": {
+        word: "btw",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=btw&lang=en",
+            meanings: [
+                { definition: "Nhân tiện, tiện thể (viết tắt trong tin nhắn mạng của cụm từ 'by the way').", definition_lang: "vi", example: "BTW, are you free this evening?", pos: "Phó từ / Viết tắt", sub_pos: "Khẩu ngữ trực tuyến", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌbiː.tiːˈdʌb.əl.juː/", region: "US" },
+                { ipa: "/ˌbiː.tiːˈdʌb.əl.juː/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "nhân tiện, tiện thể" }],
+            relations: [{ related_word: "by the way", relation_type: "Dạng đầy đủ" }]
+        }]
+    },
+
+    "cfo": {
+        word: "cfo",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=cfo&lang=en",
+            meanings: [
+                { definition: "Giám đốc tài chính (viết tắt của 'Chief Financial Officer'), người quản trị cấp cao phụ trách các vấn đề tài chính của công ty.", definition_lang: "vi", example: "The CFO presented the quarterly financial reports.", pos: "Danh từ", sub_pos: "Quản trị doanh nghiệp", source: "Custom", links: ["ceo", "cto"] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌsiː.efˈoʊ/", region: "US" },
+                { ipa: "/ˌsiː.efˈəʊ/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "giám đốc tài chính" }],
+            relations: [{ related_word: "ceo", relation_type: "Chức danh liên quan" }]
+        }]
+    },
+
+    "fdi": {
+        word: "fdi",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=fdi&lang=en",
+            meanings: [
+                { definition: "Đầu tư trực tiếp nước ngoài (viết tắt của 'Foreign Direct Investment'), hình thức đầu tư vốn dài hạn từ một quốc gia vào một quốc gia khác.", definition_lang: "vi", example: "Vietnam attracted strong FDI flows this year.", pos: "Danh từ", sub_pos: "Kinh tế", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌef.diːˈaɪ/", region: "US" },
+                { ipa: "/ˌef.diːˈaɪ/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "đầu tư trực tiếp nước ngoài" }],
+            relations: []
+        }]
+    },
+
+    "tba": {
+        word: "tba",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=tba&lang=en",
+            meanings: [
+                { definition: "Sẽ được thông báo sau (viết tắt của 'to be announced').", definition_lang: "vi", example: "The exact date and venue are TBA.", pos: "Tính từ / Viết tắt", sub_pos: "Lịch trình", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌtiː.biːˈeɪ/", region: "US" },
+                { ipa: "/ˌtiː.biːˈeɪ/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "sẽ thông báo sau" }],
+            relations: []
+        }]
+    },
+
+    "tbd": {
+        word: "tbd",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=tbd&lang=en",
+            meanings: [
+                { definition: "Chưa được quyết định, sẽ được xác định sau (viết tắt của 'to be determined' hoặc 'to be decided').", definition_lang: "vi", example: "Ticket pricing for the event is TBD.", pos: "Tính từ / Viết tắt", sub_pos: "Lịch trình", source: "Custom", links: [] }
+            ],
+            pronunciations: [
+                { ipa: "/ˌtiː.biːˈdiː/", region: "US" },
+                { ipa: "/ˌtiː.biːˈdiː/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "chưa xác định, sẽ quyết định sau" }],
+            relations: []
+        }]
+    },
+
+    "covid": {
+        word: "covid",
+        results: [{
+            lang_code: "en",
+            lang_name: "Tiếng Anh",
+            audio: "/api/v1/tts?word=covid&lang=en",
+            meanings: [
+                { definition: "Bệnh truyền nhiễm đường hô hấp cấp do chủng virus corona mới gây ra (viết tắt của Coronavirus Disease 2019).", definition_lang: "vi", example: "He tested negative for COVID yesterday.", pos: "Danh từ", sub_pos: "Y học", source: "Custom", links: ["covid-19", "coronavirus"] }
+            ],
+            pronunciations: [
+                { ipa: "/ˈkoʊ.vɪd/", region: "US" },
+                { ipa: "/ˈkəʊ.vɪd/", region: "UK" }
+            ],
+            translations: [{ lang_code: "vi", lang_name: "Tiếng Việt", translation: "bệnh covid" }],
+            relations: [{ related_word: "covid-19", relation_type: "Tên gọi chính thức" }]
+        }]
+    },
+    "covid-19": {
+        word: "covid-19",
+        aliasTo: "covid"
     }
 };
 

@@ -1,4 +1,6 @@
 import { MultiLookupResult, LanguageResult, DictionaryMeaning } from './dictionary';
+import { getEnglishPhoneticFallback } from './english_phonetics';
+import { getSynonymsAndAntonyms, getThesaurusEntry } from './synonyms_antonyms';
 
 // In-memory cache for Wiktionary definitions
 const WIKTIONARY_CACHE = new Map<string, MultiLookupResult>();
@@ -200,14 +202,18 @@ export async function lookupWiktionaryFallback(query: string, preferredLang?: st
         }
 
         if (meanings.length > 0) {
+            const thesaurusRels = getSynonymsAndAntonyms(clean);
+            const thesaurusData = getThesaurusEntry(clean);
             const langResult: LanguageResult = {
                 lang_code: 'en',
                 lang_name: 'Tiếng Anh',
                 audio: `/api/v1/tts?word=${encodeURIComponent(clean)}&lang=en`,
                 meanings,
-                pronunciations: [],
+                pronunciations: getEnglishPhoneticFallback(clean) || [],
                 translations: [],
-                relations: []
+                relations: thesaurusRels,
+                synonyms: thesaurusData?.synonyms || [],
+                antonyms: thesaurusData?.antonyms || []
             };
 
             const result: MultiLookupResult = {

@@ -98,23 +98,28 @@ describe('Dictionary Module', () => {
         it('should find plural form "classes" mapping to "class"', async () => {
             const result = await lookupWord("classes")
             expect(result.exists).toBe(true)
-            expect(result.word).toBe("classes")
+            expect(result.word).toBe("class")
             expect(result.results.length).toBeGreaterThan(0)
             expect(result.results[0].meanings.length).toBeGreaterThan(0)
-            expect(result.results[0].meanings[0].definition).toContain("class")
+            expect(result.results[0].pronunciations.length).toBe(2)
+            expect(result.results[0].pronunciations[0].region).toBe("US")
+            expect(result.results[0].pronunciations[0].ipa).toBe("/ˈklæs/")
+            expect(result.results[0].pronunciations[0].audio).toContain("accent=us")
+            expect(result.results[0].pronunciations[1].region).toBe("UK")
+            expect(result.results[0].pronunciations[1].ipa).toBe("/ˈklɑːs/")
+            expect(result.results[0].pronunciations[1].audio).toContain("accent=uk")
         })
 
         it('should resolve plural "moments" with full meanings of "moment" and proper IPA', async () => {
             const result = await lookupWord("moments")
             expect(result.exists).toBe(true)
-            expect(result.word).toBe("moments")
+            expect(result.word).toBe("moment")
             const en = result.results.find(r => r.lang_code === 'en')
             expect(en).toBeDefined()
-            expect(en!.pronunciations.length).toBeGreaterThan(0)
+            expect(en!.pronunciations.length).toBe(2)
             expect(en!.pronunciations[0].ipa).toContain("moʊ.mənt")
-            // Must contain common life meanings like "Chốc, lúc, lát" or note
+            // Must contain common life meanings like "Chốc, lúc, lát"
             const defs = en!.meanings.map(m => m.definition).join(' ')
-            expect(defs).toContain("moment")
             expect(defs).toMatch(/chốc|lúc|lát|khoảnh khắc/i)
         })
 
@@ -177,17 +182,17 @@ describe('Dictionary Module', () => {
         it('should find superlative "happiest" mapping to "happy"', async () => {
             const result = await lookupWord("happiest")
             expect(result.exists).toBe(true)
-            expect(result.word).toBe("happiest")
+            expect(result.word).toBe("happy")
             expect(result.results.length).toBeGreaterThan(0)
-            expect(result.results[0].meanings[0].definition).toContain("happy")
+            expect(result.results[0].meanings.length).toBeGreaterThan(0)
         })
 
         it('should find superlative "funniest" mapping to "funny"', async () => {
             const result = await lookupWord("funniest")
             expect(result.exists).toBe(true)
-            expect(result.word).toBe("funniest")
+            expect(result.word).toBe("funny")
             expect(result.results.length).toBeGreaterThan(0)
-            expect(result.results[0].meanings[0].definition).toContain("funny")
+            expect(result.results[0].meanings.length).toBeGreaterThan(0)
         })
 
         it('should handle numbers like 1, 100, 2024', async () => {
@@ -391,7 +396,7 @@ describe('Dictionary Module', () => {
     })
 
     describe('All English Variants & Inflections', () => {
-        it('should handle possessive case (dog\'s, teacher\'s, mary\'s, students\')', async () => {
+        it('should handle possessive case (dog\'s, teacher\'s, mary\'s, students\', Quan\'s, Quân\'s, James\')', async () => {
             const resDogs = await lookupWord("dog's")
             expect(resDogs.exists).toBe(true)
             expect(resDogs.results[0].meanings[0].definition).toContain("sở hữu cách")
@@ -404,6 +409,25 @@ describe('Dictionary Module', () => {
 
             const resStudents = await lookupWord("students'")
             expect(resStudents.exists).toBe(true)
+
+            // Vietnamese proper name possessives
+            const resQuans = await lookupWord("Quan's")
+            expect(resQuans.exists).toBe(true)
+            expect(resQuans.results[0].meanings[0].definition).toContain("sở hữu cách")
+            expect(resQuans.results[0].meanings[0].definition).toContain("Quan")
+            expect(resQuans.results[0].meanings[0].definition).not.toContain("Khi nào")
+
+            const resQuansLower = await lookupWord("quan's")
+            expect(resQuansLower.exists).toBe(true)
+            expect(resQuansLower.results[0].meanings[0].definition).toContain("Quan")
+
+            const resQuansDiacritic = await lookupWord("Quân's")
+            expect(resQuansDiacritic.exists).toBe(true)
+            expect(resQuansDiacritic.results[0].meanings[0].definition).toContain("Quân")
+
+            const resJames = await lookupWord("James'")
+            expect(resJames.exists).toBe(true)
+            expect(resJames.results[0].meanings[0].definition).toContain("James")
         })
 
         it('should handle informal and modal contractions (gonna, wanna, gotta, kinda, dunno, lemme, y\'all, needn\'t, shan\'t)', async () => {
@@ -595,6 +619,21 @@ describe('Dictionary Module', () => {
             expect(res.headers.get('Content-Type')).toBe('audio/mpeg');
         });
 
+        it('should provide authentic US and UK pronunciations for core English words missing in DB', async () => {
+            const { lookupWord } = await import('./dictionary');
+            const testWords = ['have', 'has', 'about', 'start', 'block', 'drew', 'drawn', 'driven', 'calves'];
+            for (const word of testWords) {
+                const res = await lookupWord(word, 'en');
+                const en = res.results.find(r => r.lang_code === 'en');
+                expect(en).toBeDefined();
+                expect(en!.pronunciations.length).toBeGreaterThan(0);
+                const hasUs = en!.pronunciations.some(p => p.region === 'US' || p.region?.includes('US'));
+                const hasUk = en!.pronunciations.some(p => p.region === 'UK' || p.region?.includes('UK'));
+                expect(hasUs).toBe(true);
+                expect(hasUk).toBe(true);
+            }
+        });
+
         it('should support /translate_tts route with Google query params', async () => {
             const { GET } = await import('../app/translate_tts/route');
             const req = new Request('http://localhost:3000/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=quite');
@@ -673,10 +712,12 @@ describe('Dictionary Module', () => {
             // Must have time meaning (ante meridiem)
             const hasTime = enRes!.meanings.some(m => m.definition.includes('ante meridiem') || m.definition.includes('buổi sáng'));
             expect(hasTime).toBe(true);
-            // Must have IPA for verb and time
+            // Must have exactly 2 pronunciations: US and UK
+            expect(enRes!.pronunciations.length).toBe(2);
+            expect(enRes!.pronunciations[0].region).toBe('US');
+            expect(enRes!.pronunciations[1].region).toBe('UK');
             const ipas = enRes!.pronunciations.map(p => p.ipa);
             expect(ipas).toContain('/æm/');
-            expect(ipas).toContain('/ˌeɪ ˈem/');
         });
 
         it('should have correct to be definition for "is" and "are"', async () => {
@@ -745,12 +786,12 @@ describe('Dictionary Module', () => {
             const { lookupWord } = await import('./dictionary');
             const result = await lookupWord('miniscule');
             expect(result.exists).toBe(true);
-            expect(result.word).toBe('miniscule');
+            expect(result.word).toBe('minuscule');
             const enRes = result.results.find(r => r.lang_code === 'en');
             expect(enRes).toBeDefined();
             const allDefs = enRes!.meanings.map(m => m.definition).join(' ');
             expect(allDefs).not.toContain('Letter case is the distinction');
-            expect(allDefs).toContain('minuscule');
+            expect(allDefs).toMatch(/nhỏ xíu/i);
         });
 
         it('should resolve "mindset" and "mindsets" without hardcoded "Danh từ riêng"', async () => {
@@ -814,10 +855,10 @@ describe('Dictionary Module', () => {
             // 1. ussually typo should map to usually, never returning ussualli
             const resUssually = await lookupWord('ussually');
             expect(resUssually.exists).toBe(true);
-            expect(resUssually.word).toBe('ussually');
+            expect(resUssually.word).toBe('usually');
             expect(resUssually.word).not.toBe('ussualli');
             expect(resUssually.results.length).toBeGreaterThan(0);
-            expect(resUssually.results[0].meanings[0].definition).toContain('usually');
+            expect(resUssually.results[0].meanings[0].definition).toContain('thường');
 
             // 2. usually should return pristine "usually", never "usualli"
             const resUsually = await lookupWord('usually');
@@ -928,6 +969,125 @@ describe('Dictionary Module', () => {
             expect(quiSugs).toContain('quite');
             expect(quiSugs).not.toContain('quyte');
         });
+
+        it('should correctly return complete synonyms and antonyms for core English words', async () => {
+            const { lookupWord } = await import('./dictionary');
+
+            // 1. Core word "good"
+            const resGood = await lookupWord('good', 'en');
+            expect(resGood.exists).toBe(true);
+            const enGood = resGood.results[0];
+            expect(enGood.synonyms).toBeDefined();
+            expect(enGood.synonyms!.length).toBeGreaterThanOrEqual(5);
+            expect(enGood.synonyms).toContain('great');
+            expect(enGood.synonyms).toContain('excellent');
+            expect(enGood.antonyms).toBeDefined();
+            expect(enGood.antonyms!.length).toBeGreaterThanOrEqual(4);
+            expect(enGood.antonyms).toContain('bad');
+            expect(enGood.antonyms).toContain('terrible');
+            // Check relations compatibility with Java backend ("Đồng nghĩa", "Trái nghĩa")
+            expect(enGood.relations.some(r => r.relation_type === 'Đồng nghĩa' && r.related_word === 'great')).toBe(true);
+            expect(enGood.relations.some(r => r.relation_type === 'Trái nghĩa' && r.related_word === 'bad')).toBe(true);
+
+            // 2. Core word "bad"
+            const resBad = await lookupWord('bad', 'en');
+            const enBad = resBad.results[0];
+            expect(enBad.synonyms).toContain('terrible');
+            expect(enBad.antonyms).toContain('good');
+
+            // 3. Core word "happy"
+            const resHappy = await lookupWord('happy', 'en');
+            const enHappy = resHappy.results[0];
+            expect(enHappy.synonyms).toContain('cheerful');
+            expect(enHappy.antonyms).toContain('sad');
+
+            // 4. Lemma resolution: "classes" inherits synonyms of "class"
+            const resClasses = await lookupWord('classes', 'en');
+            const enClasses = resClasses.results[0];
+            expect(enClasses.synonyms).toContain('course');
+            expect(enClasses.synonyms).toContain('lesson');
+            expect(enClasses.pronunciations.length).toBe(2);
+
+            // 5. Comparative lemma: "happier" inherits from "happy"
+            const resHappier = await lookupWord('happier', 'en');
+            const enHappier = resHappier.results[0];
+            expect(enHappier.synonyms).toContain('cheerful');
+            expect(enHappier.antonyms).toContain('sad');
+        });
+
+        it('should return rich relations including "Gốc từ" for inflected words (went, gone, eating, children, mice, etc.)', async () => {
+            // 1. Test "went"
+            const resWent = await lookupWord('went', 'en');
+            expect(resWent.exists).toBe(true);
+            expect(resWent.word).toBe('went');
+            const enWent = resWent.results.find(r => r.lang_code === 'en')!;
+            expect(enWent).toBeDefined();
+            // Relations must have "Gốc từ": "go"
+            const rootGo = enWent.relations.find(r => r.relation_type === 'Gốc từ');
+            expect(rootGo).toBeDefined();
+            expect(rootGo!.related_word.toLowerCase()).toBe('go');
+            // Pronunciations must be for went (/went/)
+            expect(enWent.pronunciations.length).toBe(2);
+            expect(enWent.pronunciations[0].ipa).toBe('/went/');
+            expect(enWent.audio).toContain('word=went');
+            // Meanings must include meta grammar definition and root meanings
+            expect(enWent.meanings.length).toBeGreaterThan(1);
+            expect(enWent.meanings[0].definition).toContain('quá khứ');
+            // Inherited synonyms & antonyms from "go"
+            expect(enWent.synonyms).toBeDefined();
+            expect(enWent.synonyms!.length).toBeGreaterThan(0);
+            expect(enWent.antonyms).toBeDefined();
+
+            // 2. Test "gone" and "going"
+            const resGone = await lookupWord('gone', 'en');
+            const enGone = resGone.results.find(r => r.lang_code === 'en')!;
+            expect(enGone.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'go')).toBe(true);
+
+            const resGoing = await lookupWord('going', 'en');
+            const enGoing = resGoing.results.find(r => r.lang_code === 'en')!;
+            expect(enGoing.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'go')).toBe(true);
+
+            // 3. Test irregular verb "ate" & "eaten" -> root "eat"
+            const resAte = await lookupWord('ate', 'en');
+            const enAte = resAte.results.find(r => r.lang_code === 'en')!;
+            expect(enAte.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'eat')).toBe(true);
+
+            const resEaten = await lookupWord('eaten', 'en');
+            const enEaten = resEaten.results.find(r => r.lang_code === 'en')!;
+            expect(enEaten.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'eat')).toBe(true);
+
+            // 4. Test irregular plural nouns: "children" -> "child", "mice" -> "mouse", "teeth" -> "tooth", "feet" -> "foot"
+            const resChildren = await lookupWord('children', 'en');
+            const enChildren = resChildren.results.find(r => r.lang_code === 'en')!;
+            expect(enChildren.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'child')).toBe(true);
+
+            const resMice = await lookupWord('mice', 'en');
+            const enMice = resMice.results.find(r => r.lang_code === 'en')!;
+            expect(enMice.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'mouse')).toBe(true);
+
+            const resTeeth = await lookupWord('teeth', 'en');
+            const enTeeth = resTeeth.results.find(r => r.lang_code === 'en')!;
+            expect(enTeeth.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'tooth')).toBe(true);
+
+            const resFeet = await lookupWord('feet', 'en');
+            const enFeet = resFeet.results.find(r => r.lang_code === 'en')!;
+            expect(enFeet.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'foot')).toBe(true);
+
+            // 5. Test root word "go" has reverse relation "Từ phái sinh" listing went, gone, going, goes
+            const resGo = await lookupWord('go', 'en');
+            const enGo = resGo.results.find(r => r.lang_code === 'en')!;
+            const derivedWords = enGo.relations.filter(r => r.relation_type === 'Từ phái sinh').map(r => r.related_word.toLowerCase());
+            expect(derivedWords).toContain('went');
+            expect(derivedWords).toContain('gone');
+            expect(derivedWords).toContain('going');
+            expect(derivedWords).toContain('goes');
+
+            // 6. Test informal contractions: "gonna" -> root "go"
+            const resGonna = await lookupWord('gonna', 'en');
+            const enGonna = resGonna.results.find(r => r.lang_code === 'en')!;
+            expect(enGonna.relations.some(r => r.relation_type === 'Gốc từ' && r.related_word.toLowerCase() === 'go')).toBe(true);
+        });
     })
 })
+
 

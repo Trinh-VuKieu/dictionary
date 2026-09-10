@@ -118,26 +118,98 @@ export function getContraction(word: string): ContractionInfo | undefined {
     return CONTRACTIONS[key];
 }
 
+// Danh sách tên riêng tiếng Việt và quốc tế phổ biến để nhận diện tên người trong sở hữu cách
+const POPULAR_NAMES = new Set([
+    // Tên người Việt Nam thông dụng (cả không dấu và có dấu)
+    'quan', 'quân', 'nam', 'hoa', 'lan', 'minh', 'linh', 'anh', 'duc', 'đức', 'hung', 'hùng',
+    'tuan', 'tuấn', 'dung', 'dũng', 'phuong', 'phương', 'trang', 'thao', 'thảo', 'mai', 'nga',
+    'huy', 'hoang', 'hoàng', 'hai', 'hải', 'son', 'sơn', 'long', 'tung', 'tùng', 'kien', 'kiên',
+    'trinh', 'kieu', 'kiều', 'khoa', 'bao', 'bảo', 'an', 'binh', 'bình', 'cuong', 'cường',
+    'dat', 'đạt', 'giang', 'ha', 'hà', 'hanh', 'hạnh', 'hieu', 'hiếu', 'huong', 'hương',
+    'khanh', 'khánh', 'khoi', 'khôi', 'lam', 'lâm', 'ly', 'ngoc', 'ngọc', 'nhan', 'nhân',
+    'phong', 'phuc', 'phúc', 'quang', 'thang', 'thắng', 'thanh', 'thinh', 'thịnh', 'thu',
+    'thuy', 'thúy', 'thủy', 'tien', 'tiên', 'tiến', 'toan', 'toàn', 'truc', 'trúc', 'tu', 'tú',
+    'uyen', 'uyên', 'vuong', 'vượng', 'xuan', 'xuân', 'yen', 'yến', 'viet', 'việt',
+    // Tên tiếng Anh / Quốc tế phổ biến
+    'john', 'mary', 'peter', 'paul', 'david', 'james', 'michael', 'robert', 'william', 'richard',
+    'thomas', 'charles', 'daniel', 'matthew', 'anthony', 'mark', 'steven', 'andrew', 'joshua',
+    'kevin', 'brian', 'george', 'edward', 'jason', 'ryan', 'jacob', 'gary', 'eric', 'justin',
+    'sarah', 'emma', 'olivia', 'lisa', 'anna', 'jessica', 'alex', 'chris', 'tom', 'bob',
+    'alice', 'jane', 'helen', 'lucy', 'jack', 'sam', 'ben', 'dan', 'joe', 'max', 'adam', 'noah',
+    'liam', 'lucas', 'henry', 'charlotte', 'amelia', 'mia', 'harper', 'evelyn', 'sophia', 'isabella'
+]);
+
+export interface PossessiveInfo {
+    base: string;
+    displayBase: string;
+    explanation: string;
+    example: string;
+    isPlural: boolean;
+    isProperName: boolean;
+}
+
 /**
  * Xử lý dạng sở hữu cách trong tiếng Anh (Possessive Case)
- * Ví dụ: dog's -> dog, teacher's -> teacher, students' -> students
+ * Hỗ trợ cả danh từ thông thường và tên riêng (Quan's, Quân's, John's, Nam's...)
  */
-export function getPossessive(word: string): { base: string; explanation: string } | null {
-    const lower = word.trim().toLowerCase().replace(/[’‘`]/g, "'");
+export function getPossessive(word: string): PossessiveInfo | null {
+    const raw = word.trim().replace(/[’‘`]/g, "'");
+    const lower = raw.toLowerCase();
 
     if (lower.endsWith("'s") && lower.length > 2) {
         const base = lower.slice(0, -2);
+        const rawBase = raw.slice(0, -2);
+        const isCapitalized = /^[A-ZÀ-Ỹ]/.test(rawBase);
+        const isKnownName = POPULAR_NAMES.has(base);
+        const isProper = isCapitalized || isKnownName;
+
+        let displayBase = rawBase;
+        if (!isCapitalized && isKnownName) {
+            displayBase = base.charAt(0).toUpperCase() + base.slice(1);
+        }
+
+        const explanation = isProper
+            ? `Dạng sở hữu cách (Possessive case) của tên riêng "${displayBase}" (nghĩa là "của ${displayBase}").`
+            : `Dạng sở hữu cách (Possessive case) của danh từ "${displayBase.toLowerCase()}" (nghĩa là "của ${displayBase.toLowerCase()}").`;
+
+        const example = isProper
+            ? `${displayBase}'s book (quyển sách của ${displayBase})`
+            : `${displayBase}'s ... (của ${displayBase})`;
+
         return {
             base,
-            explanation: `Dạng sở hữu cách (Possessive case) của "${base}" (nghĩa là "của ${base}").`
+            displayBase,
+            explanation,
+            example,
+            isPlural: false,
+            isProperName: isProper
         };
     }
 
     if (lower.endsWith("s'") && lower.length > 2) {
         const base = lower.slice(0, -1);
+        const rawBase = raw.slice(0, -1);
+        const isCapitalized = /^[A-ZÀ-Ỹ]/.test(rawBase);
+        const displayBase = rawBase;
+        const singularBase = base.endsWith('s') ? base.slice(0, -1) : base;
+
+        // Nếu là tên riêng kết thúc bằng s (như James', Charles', Jones', Chris')
+        const isSingularName = isCapitalized || POPULAR_NAMES.has(base);
+        const explanation = isSingularName
+            ? `Dạng sở hữu cách (Possessive case) của tên riêng "${displayBase}" (nghĩa là "của ${displayBase}").`
+            : `Dạng sở hữu cách số nhiều (Possessive case) của danh từ "${displayBase}" (nghĩa là "của các ${singularBase}").`;
+
+        const example = isSingularName
+            ? `${displayBase}' car (xe của ${displayBase})`
+            : `${displayBase}' books (sách của các ${singularBase})`;
+
         return {
             base,
-            explanation: `Dạng sở hữu cách số nhiều của "${base}" (nghĩa là "của các ${base.slice(0, -1)}").`
+            displayBase,
+            explanation,
+            example,
+            isPlural: !isSingularName,
+            isProperName: isSingularName
         };
     }
 

@@ -11,6 +11,7 @@ export interface Meaning {
 export interface Pronunciation {
     ipa: string;
     region: string | null;
+    audio?: string;
 }
 
 export interface Translation {
@@ -32,6 +33,8 @@ export interface LanguageResult {
     pronunciations: Pronunciation[];
     translations: Translation[];
     relations: Relation[];
+    synonyms?: string[];
+    antonyms?: string[];
 }
 
 export interface LookupResult {

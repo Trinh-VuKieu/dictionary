@@ -88,6 +88,14 @@ export async function GET(req: Request) {
         }
     }
     let lang = searchParams.get('lang') || searchParams.get('tl') || 'en';
+    const accent = (searchParams.get('accent') || searchParams.get('region') || '').trim().toLowerCase();
+    if (lang === 'en') {
+        if (accent === 'uk' || accent === 'gb' || accent === 'en-gb') {
+            lang = 'en-GB';
+        } else if (accent === 'us' || accent === 'en-us') {
+            lang = 'en-US';
+        }
+    }
 
     // Support passing full Google TTS URL via ?url=...
     const rawUrl = searchParams.get('url');
@@ -110,7 +118,7 @@ export async function GET(req: Request) {
 
     const cleanWord = word.trim();
     const cleanLang = lang.trim().toLowerCase();
-    const cacheKey = `${cleanWord.toLowerCase()}:${cleanLang}`;
+    const cacheKey = accent ? `${cleanWord.toLowerCase()}:${cleanLang}:${accent}` : `${cleanWord.toLowerCase()}:${cleanLang}`;
 
     const forceReload = searchParams.get('reload') === 'true' || 
                         searchParams.get('reload') === '1' || 

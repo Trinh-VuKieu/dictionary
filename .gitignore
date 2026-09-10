@@ -44,3 +44,7 @@ next-env.d.ts
 # dictionary.db is now tracked via Git LFS
 /dictionary.db
 !lib/dictionary.db
+*.bak
+scratch/
+*.db-shm
+*.db-wal
