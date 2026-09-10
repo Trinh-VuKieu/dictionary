@@ -505,6 +505,86 @@ export interface LemmaResult {
 }
 
 /**
+ * Danh sách các từ gốc tiếng Anh tuyệt đối KHÔNG PHẢI là dạng chia thì / phái sinh
+ * Cấm tuyệt đối gán rootWord cho các từ này (rootWord luôn là null)
+ */
+export const BASE_WORDS = new Set<string>([
+    // Chữ cái đơn lập
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+
+    // Đại từ, chỉ định từ, mạo từ, giới từ, liên từ
+    'this', 'that', 'these', 'those', 'the', 'an', 'and', 'or', 'but', 'if', 'because', 'as', 
+    'what', 'which', 'who', 'whom', 'whose', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 
+    'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 
+    'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now', 'yes', 
+    'us', 'his', 'its', 'her', 'our', 'their', 'my', 'your', 'shall', 'may', 'might', 'must',
+    'thou', 'thy', 'thee', 'thine',
+
+    // Gia đình & con người
+    'mother', 'father', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece',
+
+    // Tự nhiên & thời gian
+    'flower', 'shower', 'tower', 'summer', 'winter', 'autumn', 'spring', 'water', 'river', 'silver',
+    'copper', 'weather', 'thunder', 'timber', 'amber', 'spider', 'tiger', 'lobster', 'otter', 'beaver',
+    'badger', 'vulture', 'pasture',
+
+    // Đồ vật & đời sống
+    'butter', 'batter', 'bitter', 'dinner', 'finger', 'corner', 'letter', 'matter', 'latter',
+    'paper', 'power', 'number', 'member', 'border', 'order', 'monster', 'master', 'soldier',
+    'doctor', 'factor', 'sector', 'major', 'minor', 'mirror', 'terror', 'horror', 'honor',
+    'error', 'flavor', 'color', 'labor', 'author', 'motor', 'liquor', 'harbor', 'vapor',
+    'anchor', 'sensor', 'pastor', 'tenor', 'vigor', 'armor', 'officer', 'chapter', 'character', 'shelter',
+    'disaster', 'laughter', 'diameter', 'parameter', 'perimeter', 'centimeter', 'millimeter',
+    'danger', 'hunger', 'clever', 'fever', 'liver', 'proper', 'answer',
+
+    // Trạng từ / Tính từ kết thúc bằng -ly là từ gốc
+    'early', 'only', 'daily', 'ugly', 'holy', 'silly', 'lonely', 'friendly', 'lovely', 'lively',
+    'orderly', 'timely', 'costly', 'deadly', 'likely', 'unlikely', 'belly', 'jelly', 'ally', 'rally',
+    'apply', 'reply', 'supply', 'imply', 'comply', 'rely',
+
+    // Từ gốc bắt đầu bằng in- / im-
+    'image', 'imago', 'impact', 'import', 'income', 'index', 'infant', 'infra', 'inlet', 'inbox',
+    'input', 'insect', 'inside', 'insight', 'instance', 'instant', 'instead', 'instrument', 'insult',
+    'intact', 'intel', 'intend', 'intent', 'interest', 'interim', 'intern', 'interview', 'into',
+    'invest', 'invent', 'invite', 'invoice', 'involve', 'incur', 'ingot', 'ink', 'inked',
+
+    // Từ gốc bắt đầu bằng dis-
+    'disease', 'discuss', 'distant', 'distil', 'distort', 'disturb', 'discourse', 'dismay', 'display',
+    'discover', 'disaster', 'disk', 'dish',
+
+    // Từ gốc bắt đầu bằng re-
+    'reach', 'read', 'ready', 'real', 'really', 'reason', 'remain', 'remedy', 'remember', 'remind',
+    'remote', 'remove', 'render', 'rent', 'repair', 'repeat', 'repent', 'report', 'rescue', 'research',
+    'resemble', 'resent', 'reserve', 'reset', 'reside', 'resign', 'resist', 'resolve', 'resort',
+    'resource', 'respect', 'respond', 'response', 'rest', 'restaurant', 'result', 'resume', 'retail',
+    'retain', 'retire', 'return', 'reveal', 'revenue', 'reverse', 'review', 'reward', 'refuse',
+
+    // Từ gốc bắt đầu bằng un-
+    'uncle', 'unit', 'union', 'under', 'until', 'unless',
+
+    // Từ gốc kết thúc bằng -s
+    'gas', 'bus', 'plus', 'thus', 'lens', 'chaos', 'cosmos', 'status', 'virus', 'focus', 'basis',
+    'crisis', 'thesis', 'analysis', 'axis', 'canvas', 'mars', 'paris', 'series', 'species', 'corps',
+    'debris', 'chassis', 'walrus', 'octopus', 'platypus', 'circus', 'fetus', 'genus', 'sinus',
+    'bonus', 'minus', 'chorus', 'cactus', 'fungus', 'radius', 'stimulus', 'syllabus', 'alumnus',
+    'terminus', 'oasis', 'diagnosis', 'prognosis', 'synopsis', 'parenthesis', 'paralysis',
+    'neurosis', 'psychosis', 'bison', 'news', 'amends', 'barracks', 'billiards', 'scissors',
+    'trousers', 'panties', 'measles', 'mumps', 'rickets', 'shingles', 'customs', 'premises',
+
+    // Từ gốc kết thúc bằng -ment, -tion
+    'moment', 'element', 'comment', 'document', 'segment', 'garment', 'pigment', 'monument',
+    'nation', 'station', 'motion', 'portion', 'section', 'fraction', 'suction', 'caption', 'option',
+    'mention', 'question'
+]);
+
+export function isBaseWord(word: string | null | undefined): boolean {
+    if (!word) return false;
+    const lower = word.trim().toLowerCase();
+    if (lower.length <= 1) return true;
+    return BASE_WORDS.has(lower);
+}
+
+/**
  * Tự động chuyển đổi hình thái từ (Lemmatization)
  * Hỗ trợ tất cả danh từ số nhiều (kể cả bất quy tắc: classes, children, mice, teeth, criteria...)
  * Hỗ trợ tất cả động từ chia thì (went, running, studied, written, having...)
@@ -513,7 +593,7 @@ export interface LemmaResult {
  */
 export function getLemmas(word: string): LemmaResult[] {
     const lower = word.trim().toLowerCase().replace(/[’‘`]/g, "'");
-    if (!lower || lower.length < 2) return [];
+    if (!lower || lower.length < 2 || isBaseWord(lower)) return [];
 
     const results: LemmaResult[] = [];
     const seen = new Set<string>();

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { lookupWord } from '../../../../lib/dictionary';
+import { isBaseWord } from '../../../../lib/morphology';
 
 // Cache: 1 day fresh + 1 year stale-while-revalidate + CORS
 const CACHE_HEADERS = {
@@ -94,7 +95,7 @@ export async function GET(req: Request) {
             const primary = result.results[0];
             const cleanWord = result.word;
             let rootWord = result.rootWord ?? primary?.rootWord ?? null;
-            if (rootWord && rootWord.trim().toLowerCase() === cleanWord.trim().toLowerCase()) {
+            if (rootWord && (rootWord.trim().toLowerCase() === cleanWord.trim().toLowerCase() || isBaseWord(cleanWord))) {
                 rootWord = null;
             }
             return NextResponse.json({

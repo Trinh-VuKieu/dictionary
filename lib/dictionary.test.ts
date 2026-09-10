@@ -1251,6 +1251,35 @@ describe('Dictionary Module', () => {
             expect(resWent.synonyms!.length).toBeGreaterThan(0);
             expect(resWent.antonyms!.length).toBeGreaterThan(0);
         });
+
+        it('should strictly return rootWord: null for base words (this, mother, flower, summer, etc.) and valid rootWord for inflections', async () => {
+            // 1. Base words MUST have rootWord === null
+            const baseWordsToCheck = [
+                'this', 'that', 'these', 'those', 'mother', 'father', 'brother', 
+                'flower', 'shower', 'summer', 'butter', 'corner', 'early', 'apply', 
+                'image', 'invent', 'invest', 'report', 'display', 'a', 'the'
+            ];
+
+            for (const w of baseWordsToCheck) {
+                const res = await lookupWord(w);
+                expect(res.exists).toBe(true);
+                expect(res.rootWord).toBe(null);
+                expect(res.results[0].relations.some(r => r.relation_type === 'Gốc từ')).toBe(false);
+            }
+
+            // 2. Inflected forms MUST have correct rootWord
+            const resReached = await lookupWord('reached');
+            expect(resReached.rootWord).toBe('reach');
+
+            const resReaches = await lookupWord('reaches');
+            expect(resReaches.rootWord).toBe('reach');
+
+            const resEating = await lookupWord('eating');
+            expect(resEating.rootWord).toBe('eat');
+
+            const resClasses = await lookupWord('classes');
+            expect(resClasses.rootWord).toBe('class');
+        });
     })
 })
 

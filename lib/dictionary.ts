@@ -79,7 +79,7 @@ const RELATION_LABELS: Record<string, string> = {
 // Language labels - auto-generated from kaikki.org-dictionary-all.jsonl
 import { LANG_LABELS } from './lang_labels';
 import { getCustomWord, getCustomSuggestions } from './custom_words';
-import { getContraction, getLemmas, getPossessive, getSpellingVariants, CONTRACTIONS } from './morphology';
+import { getContraction, getLemmas, getPossessive, getSpellingVariants, CONTRACTIONS, isBaseWord } from './morphology';
 import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
 import { VN_UNACCENTED_PLACES, getPlaceOrName, getPlacesSuggestions } from './places_and_names';
 import { lookupWikiFallback } from './wiki_fallback';
@@ -696,9 +696,14 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
             });
         }
 
+        const isBase = isBaseWord(lookupRes.word);
+        if (isBase) {
+            relations = relations.filter(r => r.relation_type !== 'Gốc từ');
+        }
+
         const rootRel = relations.find(r => r.relation_type === 'Gốc từ');
         let rootWord = rootRel ? rootRel.related_word : null;
-        if (rootWord && rootWord.trim().toLowerCase() === lookupRes.word.trim().toLowerCase()) {
+        if (rootWord && (rootWord.trim().toLowerCase() === lookupRes.word.trim().toLowerCase() || isBase)) {
             rootWord = null;
         }
         const meaningGroups = buildMeaningGroups(res.meanings, synonyms, antonyms);
@@ -721,7 +726,7 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
 
     const primary = normalizedResults[0];
     let primaryRootWord = primary?.rootWord ?? null;
-    if (primaryRootWord && primaryRootWord.trim().toLowerCase() === lookupRes.word.trim().toLowerCase()) {
+    if (primaryRootWord && (primaryRootWord.trim().toLowerCase() === lookupRes.word.trim().toLowerCase() || isBaseWord(lookupRes.word))) {
         primaryRootWord = null;
     }
 
@@ -987,107 +992,124 @@ function lookupDirectFromDb(word: string, lang?: string): MultiLookupResult {
  */
 function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: LanguageResult): LanguageResult {
     const lowerWord = cleanWord.toLowerCase();
+
+    // Nếu là từ gốc cơ bản (base word), tuyệt đối không suy đoán tiền tố/hậu tố và loại bỏ quan hệ gốc từ sai
+    if (isBaseWord(lowerWord)) {
+        return {
+            ...currentResult,
+            relations: currentResult.relations.filter(r => r.relation_type !== 'Gốc từ')
+        };
+    }
+
     const lemmas = getLemmas(lowerWord);
 
-    // 1. Bổ sung nhận diện tiền tố tiếng Anh (un-, dis-, im-, in-, non-, mis-, re-, over-, under-)
-    const prefixRules: RegExp[] = [
-        /^un([a-z]{3,})$/,
-        /^dis([a-z]{3,})$/,
-        /^(?:im|in|il|ir)([a-z]{3,})$/,
-        /^non\-?([a-z]{3,})$/,
-        /^mis([a-z]{3,})$/,
-        /^re([a-z]{3,})$/,
-        /^over([a-z]{3,})$/,
-        /^under([a-z]{3,})$/
-    ];
-    for (const regex of prefixRules) {
-        const m = lowerWord.match(regex);
-        if (m) {
-            const root = m[1];
-            if (root.length >= 3 && root !== lowerWord) {
-                const rootRes = lookupDirectFromDb(root, 'en');
-                if (rootRes.exists && rootRes.results.some(r => r.lang_code === 'en')) {
-                    if (!lemmas.some(l => l.lemma.toLowerCase() === root)) {
-                        lemmas.push({
-                            lemma: root,
-                            posType: 'adjective',
-                            explanation: `Từ phái sinh có tiền tố từ gốc "${root}".`
-                        });
+    // 1. Chỉ bổ sung nhận diện tiền tố tiếng Anh nếu chưa có lemma hình thái nào
+    if (lemmas.length === 0) {
+        const prefixRules: RegExp[] = [
+            /^un([a-z]{3,})$/,
+            /^dis([a-z]{3,})$/,
+            /^(?:im|in|il|ir)([a-z]{3,})$/,
+            /^non\-?([a-z]{3,})$/,
+            /^mis([a-z]{3,})$/,
+            /^re([a-z]{3,})$/,
+            /^over([a-z]{3,})$/,
+            /^under([a-z]{3,})$/
+        ];
+        const FALSE_PREFIX_ROOTS = new Set([
+            'ached', 'aches', 'aching', 'action', 'actions', 'actor', 'quests', 'viewed',
+            'spect', 'gard', 'gion', 'peat', 'rend', 'rath', 'main', 'veal', 'fuse', 'cord', 'port'
+        ]);
+        for (const regex of prefixRules) {
+            const m = lowerWord.match(regex);
+            if (m) {
+                const root = m[1];
+                if (root.length >= 3 && root !== lowerWord && !FALSE_PREFIX_ROOTS.has(root) && !isBaseWord(root)) {
+                    const rootRes = lookupDirectFromDb(root, 'en');
+                    if (rootRes.exists && rootRes.results.some(r => r.lang_code === 'en')) {
+                        if (!lemmas.some(l => l.lemma.toLowerCase() === root)) {
+                            lemmas.push({
+                                lemma: root,
+                                posType: 'adjective',
+                                explanation: `Từ phái sinh có tiền tố từ gốc "${root}".`
+                            });
+                        }
                     }
                 }
             }
         }
     }
 
-    // 2. Bổ sung nhận diện hậu tố tiếng Anh (-ness, -ful, -less, -able, -ible, -ment, -tion, -sion, -er, -or, -ly)
-    const suffixCandidates: string[] = [];
-    if (lowerWord.endsWith('ness') && lowerWord.length > 5) {
-        const base = lowerWord.slice(0, -4);
-        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
-        suffixCandidates.push(base);
-    }
-    if (lowerWord.endsWith('ful') && lowerWord.length > 4) {
-        const base = lowerWord.slice(0, -3);
-        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
-        suffixCandidates.push(base);
-    }
-    if (lowerWord.endsWith('less') && lowerWord.length > 5) {
-        const base = lowerWord.slice(0, -4);
-        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
-        suffixCandidates.push(base);
-    }
-    if (lowerWord.endsWith('able') && lowerWord.length > 5) {
-        const base = lowerWord.slice(0, -4);
-        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
-        suffixCandidates.push(base, base + 'e');
-    } else if (lowerWord.endsWith('ible') && lowerWord.length > 5) {
-        const base = lowerWord.slice(0, -4);
-        suffixCandidates.push(base, base + 'e');
-    }
-    if (lowerWord.endsWith('ment') && lowerWord.length > 5) {
-        const base = lowerWord.slice(0, -4);
-        suffixCandidates.push(base);
-        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
-    }
-    if (lowerWord.endsWith('sion') && lowerWord.length > 5) {
-        suffixCandidates.push(lowerWord.slice(0, -4) + 'de', lowerWord.slice(0, -4) + 't');
-    }
-    if (lowerWord.endsWith('ation') && lowerWord.length > 6) {
-        suffixCandidates.push(lowerWord.slice(0, -3) + 'e', lowerWord.slice(0, -5), lowerWord.slice(0, -5) + 'e');
-    }
-    if (lowerWord.endsWith('ion') && lowerWord.length > 4) {
-        suffixCandidates.push(lowerWord.slice(0, -3), lowerWord.slice(0, -3) + 'e');
-    }
-    if (lowerWord.endsWith('er') && lowerWord.length > 4) {
-        const base = lowerWord.slice(0, -2);
-        if (base.length >= 3 && base[base.length - 1] === base[base.length - 2] && !/[aeiouy]/.test(base[base.length - 1])) {
-            suffixCandidates.push(base.slice(0, -1));
+    // 2. Chỉ bổ sung nhận diện hậu tố tiếng Anh nếu chưa có lemma hình thái
+    if (lemmas.length === 0) {
+        const suffixCandidates: string[] = [];
+        if (lowerWord.endsWith('ness') && lowerWord.length > 5) {
+            const base = lowerWord.slice(0, -4);
+            if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+            suffixCandidates.push(base);
         }
-        suffixCandidates.push(base, base + 'e');
-        if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
-    } else if (lowerWord.endsWith('or') && lowerWord.length > 4) {
-        const base = lowerWord.slice(0, -2);
-        if (base.length >= 3 && base[base.length - 1] === base[base.length - 2] && !/[aeiouy]/.test(base[base.length - 1])) {
-            suffixCandidates.push(base.slice(0, -1));
+        if (lowerWord.endsWith('ful') && lowerWord.length > 4) {
+            const base = lowerWord.slice(0, -3);
+            if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+            suffixCandidates.push(base);
         }
-        suffixCandidates.push(base, base + 'e', base + 't');
-    }
-    if (lowerWord.endsWith('ily') && lowerWord.length > 4) {
-        suffixCandidates.push(lowerWord.slice(0, -3) + 'y');
-    } else if (lowerWord.endsWith('ly') && lowerWord.length > 3) {
-        suffixCandidates.push(lowerWord.slice(0, -2));
-    }
+        if (lowerWord.endsWith('less') && lowerWord.length > 5) {
+            const base = lowerWord.slice(0, -4);
+            if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+            suffixCandidates.push(base);
+        }
+        if (lowerWord.endsWith('able') && lowerWord.length > 5) {
+            const base = lowerWord.slice(0, -4);
+            if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+            suffixCandidates.push(base, base + 'e');
+        } else if (lowerWord.endsWith('ible') && lowerWord.length > 5) {
+            const base = lowerWord.slice(0, -4);
+            suffixCandidates.push(base, base + 'e');
+        }
+        if (lowerWord.endsWith('ment') && lowerWord.length > 5) {
+            const base = lowerWord.slice(0, -4);
+            suffixCandidates.push(base);
+            if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+        }
+        if (lowerWord.endsWith('sion') && lowerWord.length > 5) {
+            suffixCandidates.push(lowerWord.slice(0, -4) + 'de', lowerWord.slice(0, -4) + 't');
+        }
+        if (lowerWord.endsWith('ation') && lowerWord.length > 6) {
+            suffixCandidates.push(lowerWord.slice(0, -3) + 'e', lowerWord.slice(0, -5), lowerWord.slice(0, -5) + 'e');
+        }
+        if (lowerWord.endsWith('ion') && lowerWord.length > 4) {
+            suffixCandidates.push(lowerWord.slice(0, -3), lowerWord.slice(0, -3) + 'e');
+        }
+        if (lowerWord.endsWith('er') && lowerWord.length > 4) {
+            const base = lowerWord.slice(0, -2);
+            if (base.length >= 3 && base[base.length - 1] === base[base.length - 2] && !/[aeiouy]/.test(base[base.length - 1])) {
+                suffixCandidates.push(base.slice(0, -1));
+            }
+            suffixCandidates.push(base, base + 'e');
+            if (base.endsWith('i')) suffixCandidates.push(base.slice(0, -1) + 'y');
+        } else if (lowerWord.endsWith('or') && lowerWord.length > 4) {
+            const base = lowerWord.slice(0, -2);
+            if (base.length >= 3 && base[base.length - 1] === base[base.length - 2] && !/[aeiouy]/.test(base[base.length - 1])) {
+                suffixCandidates.push(base.slice(0, -1));
+            }
+            suffixCandidates.push(base, base + 'e', base + 't');
+        }
+        if (lowerWord.endsWith('ily') && lowerWord.length > 4) {
+            suffixCandidates.push(lowerWord.slice(0, -3) + 'y');
+        } else if (lowerWord.endsWith('ly') && lowerWord.length > 3) {
+            suffixCandidates.push(lowerWord.slice(0, -2));
+        }
 
-    for (const cand of suffixCandidates) {
-        if (cand.length >= 3 && cand !== lowerWord && !lemmas.some(l => l.lemma.toLowerCase() === cand)) {
-            const rootRes = lookupDirectFromDb(cand, 'en');
-            if (rootRes.exists && rootRes.results.some(r => r.lang_code === 'en')) {
-                lemmas.push({
-                    lemma: cand,
-                    posType: 'noun',
-                    explanation: `Từ phái sinh có hậu tố từ gốc "${cand}".`
-                });
-                break;
+        for (const cand of suffixCandidates) {
+            if (cand.length >= 3 && cand !== lowerWord && !isBaseWord(cand) && !lemmas.some(l => l.lemma.toLowerCase() === cand)) {
+                const rootRes = lookupDirectFromDb(cand, 'en');
+                if (rootRes.exists && rootRes.results.some(r => r.lang_code === 'en')) {
+                    lemmas.push({
+                        lemma: cand,
+                        posType: 'noun',
+                        explanation: `Từ phái sinh có hậu tố từ gốc "${cand}".`
+                    });
+                    break;
+                }
             }
         }
     }
@@ -1102,11 +1124,11 @@ function enrichEnglishResultWithLemmas(cleanWord: string, currentResult: Languag
     let translations = [...currentResult.translations];
     let hasEnrichedMeanings = false;
 
-    // 1. Luôn bổ sung quan hệ Gốc từ cho tất cả các lemma hợp lệ
+    // 1. Luôn bổ sung quan hệ Gốc từ cho tất cả các lemma hợp lệ (push vào sau để giữ thứ tự ưu tiên của lemma tự nhiên)
     for (const item of lemmas) {
         if (item.lemma.toLowerCase() === lowerWord) continue;
         if (!relations.some(rel => rel.related_word.toLowerCase() === item.lemma.toLowerCase() && rel.relation_type === 'Gốc từ')) {
-            relations.unshift({
+            relations.push({
                 related_word: item.lemma,
                 relation_type: 'Gốc từ'
             });
