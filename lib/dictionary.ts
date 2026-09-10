@@ -109,9 +109,9 @@ export interface DictionaryPronunciation {
 }
 
 export interface GroupedDefinition {
-    definition: string;
-    definitionVi?: string;
-    example?: string | null;
+    definition: string | null;
+    definitionVi: string | null;
+    example: string | null;
 }
 
 export interface GroupedMeaning {
@@ -597,9 +597,11 @@ export function buildMeaningGroups(
                 definitions: []
             });
         }
+        const isVi = m.definition_lang === 'vi' || /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(m.definition);
+
         groupMap.get(posKey)!.definitions.push({
-            definition: m.definition,
-            definitionVi: m.definition_lang === 'vi' ? m.definition : (m.definition_lang === 'en' ? undefined : m.definition),
+            definition: isVi ? null : m.definition,
+            definitionVi: isVi ? m.definition : null,
             example: m.example || null
         });
     }
