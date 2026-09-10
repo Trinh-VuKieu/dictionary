@@ -599,9 +599,18 @@ export function buildMeaningGroups(
         }
         const isVi = m.definition_lang === 'vi' || /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(m.definition);
 
+        let cleanDefVi: string | null = null;
+        if (isVi && m.definition) {
+            let cleaned = m.definition.trim().replace(/^[,;\s\-]+/, '').trim();
+            if (cleaned) {
+                cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+                cleanDefVi = cleaned;
+            }
+        }
+
         groupMap.get(posKey)!.definitions.push({
             definition: isVi ? null : m.definition,
-            definitionVi: isVi ? m.definition : null,
+            definitionVi: cleanDefVi,
             example: m.example || null
         });
     }
@@ -644,10 +653,16 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
         }
 
         const synonyms = Array.from(new Set(
-            relations.filter(r => r.relation_type === 'Đồng nghĩa').map(r => r.related_word)
+            relations
+                .filter(r => r.relation_type === 'Đồng nghĩa')
+                .map(r => r.related_word)
+                .filter(w => w.trim().toLowerCase() !== lookupRes.word.trim().toLowerCase())
         ));
         const antonyms = Array.from(new Set(
-            relations.filter(r => r.relation_type === 'Trái nghĩa').map(r => r.related_word)
+            relations
+                .filter(r => r.relation_type === 'Trái nghĩa')
+                .map(r => r.related_word)
+                .filter(w => w.trim().toLowerCase() !== lookupRes.word.trim().toLowerCase())
         ));
 
         let updatedPronunciations = res.pronunciations;
@@ -680,7 +695,10 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
         }
 
         const rootRel = relations.find(r => r.relation_type === 'Gốc từ');
-        const rootWord = rootRel ? rootRel.related_word : null;
+        let rootWord = rootRel ? rootRel.related_word : null;
+        if (rootWord && rootWord.trim().toLowerCase() === lookupRes.word.trim().toLowerCase()) {
+            rootWord = null;
+        }
         const meaningGroups = buildMeaningGroups(res.meanings, synonyms, antonyms);
 
         return {
@@ -700,10 +718,15 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
     });
 
     const primary = normalizedResults[0];
+    let primaryRootWord = primary?.rootWord ?? null;
+    if (primaryRootWord && primaryRootWord.trim().toLowerCase() === lookupRes.word.trim().toLowerCase()) {
+        primaryRootWord = null;
+    }
+
     return {
         ...lookupRes,
-        rootWord: primary?.rootWord ?? null,
-        root_word: primary?.root_word ?? null,
+        rootWord: primaryRootWord,
+        root_word: primaryRootWord,
         phonetics: primary?.phonetics ?? [],
         synonyms: primary?.synonyms ?? [],
         antonyms: primary?.antonyms ?? [],

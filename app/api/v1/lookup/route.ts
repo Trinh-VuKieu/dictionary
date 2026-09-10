@@ -92,10 +92,15 @@ export async function GET(req: Request) {
         // Support direct DictionaryWord format for Java backend
         if (format === 'model' || format === 'edu' || format === 'dictionary_word') {
             const primary = result.results[0];
+            const cleanWord = result.word;
+            let rootWord = result.rootWord ?? primary?.rootWord ?? null;
+            if (rootWord && rootWord.trim().toLowerCase() === cleanWord.trim().toLowerCase()) {
+                rootWord = null;
+            }
             return NextResponse.json({
                 id: null,
-                word: result.word,
-                rootWord: result.rootWord ?? null,
+                word: cleanWord,
+                rootWord: rootWord,
                 phonetics: result.phonetics || primary?.phonetics || [],
                 meanings: result.meaning_groups || primary?.meaning_groups || []
             }, { status: 200, headers: CACHE_HEADERS });
