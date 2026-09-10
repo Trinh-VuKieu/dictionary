@@ -84,7 +84,7 @@ import { parseNumberEntry, parseTimeEntry } from './number_time_engine';
 import { VN_UNACCENTED_PLACES, getPlaceOrName, getPlacesSuggestions } from './places_and_names';
 import { lookupWikiFallback } from './wiki_fallback';
 import { lookupWiktionaryFallback } from './wiktionary_fallback';
-import { getEnglishPhoneticFallback } from './english_phonetics';
+import { getEnglishPhoneticFallback, deriveInflectedIpa, generateEnglishIpa } from './english_phonetics';
 import { getSynonymsAndAntonyms, getThesaurusEntry } from './synonyms_antonyms';
 
 // Guard chống vòng lặp vô hạn khi tra cứu biến thể chính tả 2 chiều (color↔colour, grey↔gray...)
@@ -425,17 +425,55 @@ function sanitizeDefinition(rawDef: string): string {
 }
 
 /**
- * Chuẩn hóa chuỗi IPA: luôn đảm bảo bắt đầu bằng '/' và kết thúc bằng '/'
+ * Kiểm tra xem một chuỗi IPA có phải là phiên âm rác hoặc giả mạo (chính tả tiếng Anh bọc trong slashes) hay không
  */
-export function cleanIpa(raw: string | null | undefined, fallbackWord?: string): string {
-    if (!raw || !raw.trim()) {
-        return fallbackWord ? `/${fallbackWord.trim()}/` : '//';
+export function isFakeIpa(raw: string | null | undefined, wordText?: string): boolean {
+    if (!raw || !raw.trim()) return true;
+    const s = raw.trim().replace(/^\/+|\/+$/g, '').replace(/^\[+|\]+$/g, '').trim().toLowerCase();
+    if (!s || s === '//' || s === '[]') return true;
+
+    if (wordText) {
+        const cleanWord = wordText.trim().toLowerCase();
+        // Các từ ngắn mà IPA trùng với mặt chữ chính tả tiếng Anh
+        const VALID_EXACT_IPA = new Set(['bed', 'men', 'pen', 'ten', 'net', 'set', 'let', 'wet', 'red', 'pet', 'went', 'did']);
+        if (s === cleanWord && !VALID_EXACT_IPA.has(cleanWord)) {
+            return true;
+        }
     }
-    const s = raw.trim().replace(/^\/+|\/+$/g, '').trim();
-    if (!s) {
-        return fallbackWord ? `/${fallbackWord.trim()}/` : '//';
-    }
+
+    // Các chữ cái tiếng Anh không đứng đơn lẻ trong IPA chuẩn tiếng Anh (như 'c' đứng lẻ, 'q', 'x')
+    if (/[cqx]/.test(s)) return true;
+    // Chữ cái 'y' trong IPA chỉ là nguyên âm tiếng Đức/Pháp [y], trong tiếng Anh phiên âm là /j/, /aɪ/ hoặc /i/
+    if (s.includes('y') && s.length > 2) return true;
+
+    return false;
+}
+
+/**
+ * Chuẩn hóa chuỗi IPA: luôn đảm bảo bắt đầu bằng '/' và kết thúc bằng '/'
+ * Tuyệt đối không fallback sang chữ tiếng Anh thô
+ */
+export function cleanIpa(raw: string | null | undefined): string | null {
+    if (!raw || !raw.trim()) return null;
+    const s = raw.trim().replace(/^\/+|\/+$/g, '').replace(/^\[+|\]+$/g, '').trim();
+    if (!s || s === '//' || s === '[]') return null;
     return `/${s}/`;
+}
+
+/**
+ * Truy vấn phiên âm gốc từ SQLite cho một từ tiếng Anh
+ */
+function getBasePronunciationsFromDb(word: string): DictionaryPronunciation[] {
+    try {
+        const { lookupByLangStmt, getPronunciationsStmt } = getStatements();
+        const row = lookupByLangStmt!.get(word.toLowerCase().trim(), 'en') as { id: number } | undefined;
+        if (row) {
+            return (getPronunciationsStmt!.all(row.id) as DictionaryPronunciation[]) || [];
+        }
+    } catch {
+        // ignore
+    }
+    return [];
 }
 
 /**
@@ -468,18 +506,22 @@ export function formatUsUkPronunciations(
     if (mapFallback && mapFallback.length > 0) {
         const usFound = mapFallback.find(p => p.region === 'US' || p.region?.includes('US'));
         const ukFound = mapFallback.find(p => p.region === 'UK' || p.region?.includes('UK'));
-        if (usFound) usIpa = usFound.ipa;
-        if (ukFound) ukIpa = ukFound.ipa;
+        if (usFound && !isFakeIpa(usFound.ipa, cleanWord)) usIpa = usFound.ipa;
+        if (ukFound && !isFakeIpa(ukFound.ipa, cleanWord)) ukIpa = ukFound.ipa;
     }
 
-    // 2. Tìm trong rawPronunciations từ SQLite
-    if ((!usIpa || !ukIpa) && rawPronunciations && rawPronunciations.length > 0) {
-        for (const p of rawPronunciations) {
+    // 2. Tìm trong rawPronunciations hoặc trực tiếp từ SQLite cho cleanWord (bỏ qua các IPA rác/fake)
+    if (!usIpa || !ukIpa) {
+        const directDbProns = (rawPronunciations && rawPronunciations.length > 0)
+            ? rawPronunciations
+            : getBasePronunciationsFromDb(cleanWord);
+        const validPronunciations = directDbProns.filter(p => !isFakeIpa(p.ipa, cleanWord));
+        for (const p of validPronunciations) {
             const reg = (p.region || '').toLowerCase();
             const ipa = p.ipa;
 
-            // Nhận diện US qua region hoặc đặc trưng nguyên âm US (oʊ, GA, American)
-            if (!usIpa && (reg.includes('us') || reg.includes('american') || reg.includes('ga') || ipa.includes('oʊ'))) {
+            // Nhận diện US qua region hoặc đặc trưng nguyên âm US (oʊ, GA, American, ɚ, ɝ)
+            if (!usIpa && (reg.includes('us') || reg.includes('american') || reg.includes('ga') || ipa.includes('oʊ') || ipa.includes('ɚ') || ipa.includes('ɝ'))) {
                 usIpa = ipa;
             }
             // Nhận diện UK qua region hoặc đặc trưng nguyên âm UK (Received, RP, British, əʊ, ɒ)
@@ -490,7 +532,7 @@ export function formatUsUkPronunciations(
 
         // Tách theo đặc trưng /æ/ (US) vs /ɑː/ (UK) (như class, pass, dance, ask, bath, fast)
         if (!usIpa || !ukIpa) {
-            for (const p of rawPronunciations) {
+            for (const p of validPronunciations) {
                 if (!usIpa && p.ipa.includes('æ') && !p.ipa.includes('ɑː')) {
                     usIpa = p.ipa;
                 }
@@ -500,7 +542,7 @@ export function formatUsUkPronunciations(
             }
         }
 
-        const availableIpas = rawPronunciations.map(p => p.ipa).filter(Boolean);
+        const availableIpas = validPronunciations.map(p => p.ipa).filter(Boolean);
         if (availableIpas.length > 0) {
             if (!usIpa && !ukIpa) {
                 if (availableIpas.length >= 2 && availableIpas[0] !== availableIpas[1]) {
@@ -528,23 +570,86 @@ export function formatUsUkPronunciations(
         }
     }
 
-    // 3. Nếu vẫn thiếu một trong 2 hoặc cả hai, thử tìm theo từ gốc (base lemma)
+    // 3. Nếu vẫn thiếu một trong 2 hoặc cả hai, tìm theo từ gốc (base lemma) và suy diễn biến thể (deriveInflectedIpa)
     if (!usIpa || !ukIpa) {
         const lemmas = getLemmas(cleanWord);
         for (const item of lemmas) {
             if (item.lemma.toLowerCase() === cleanWord) continue;
+
+            // 3.1. Thử trong fallback map của từ gốc
             const baseFallback = getEnglishPhoneticFallback(item.lemma);
             if (baseFallback && baseFallback.length > 0) {
                 const usFound = baseFallback.find(p => p.region === 'US' || p.region?.includes('US'));
                 const ukFound = baseFallback.find(p => p.region === 'UK' || p.region?.includes('UK'));
-                if (!usIpa && usFound) usIpa = usFound.ipa;
-                if (!ukIpa && ukFound) ukIpa = ukFound.ipa;
+                if (!usIpa && usFound && !isFakeIpa(usFound.ipa, item.lemma)) {
+                    usIpa = deriveInflectedIpa(usFound.ipa, cleanWord, item.lemma, 'US');
+                }
+                if (!ukIpa && ukFound && !isFakeIpa(ukFound.ipa, item.lemma)) {
+                    ukIpa = deriveInflectedIpa(ukFound.ipa, cleanWord, item.lemma, 'UK');
+                }
+            }
+
+            // 3.2. Thử trong SQLite Database của từ gốc
+            if (!usIpa || !ukIpa) {
+                const dbProns = getBasePronunciationsFromDb(item.lemma);
+                if (dbProns && dbProns.length > 0) {
+                    const validDbProns = dbProns.filter(p => !isFakeIpa(p.ipa, item.lemma));
+                    const usFound = validDbProns.find(p => p.region === 'US' || p.region?.includes('US'));
+                    const ukFound = validDbProns.find(p => p.region === 'UK' || p.region?.includes('UK'));
+                    if (!usIpa && usFound) {
+                        usIpa = deriveInflectedIpa(usFound.ipa, cleanWord, item.lemma, 'US');
+                    }
+                    if (!ukIpa && ukFound) {
+                        ukIpa = deriveInflectedIpa(ukFound.ipa, cleanWord, item.lemma, 'UK');
+                    }
+                    if (!usIpa && !ukIpa && validDbProns[0]) {
+                        usIpa = deriveInflectedIpa(validDbProns[0].ipa, cleanWord, item.lemma, 'US');
+                        ukIpa = deriveInflectedIpa(validDbProns[0].ipa, cleanWord, item.lemma, 'UK');
+                    }
+                }
             }
         }
     }
 
-    const finalUsIpa = cleanIpa(usIpa, cleanWord);
-    const finalUkIpa = cleanIpa(ukIpa || usIpa, cleanWord);
+    // 3.3. Nếu là từ sai chính tả hoặc biến thể chính tả (ví dụ: bougth -> bought, thougth -> thought):
+    if (!usIpa || !ukIpa) {
+        const variants = getSpellingVariants(cleanWord);
+        for (const v of variants) {
+            if (v.toLowerCase() === cleanWord) continue;
+            const vFallback = getEnglishPhoneticFallback(v);
+            if (vFallback && vFallback.length > 0) {
+                const usFound = vFallback.find(p => p.region === 'US' || p.region?.includes('US'));
+                const ukFound = vFallback.find(p => p.region === 'UK' || p.region?.includes('UK'));
+                if (!usIpa && usFound && !isFakeIpa(usFound.ipa, v)) usIpa = usFound.ipa;
+                if (!ukIpa && ukFound && !isFakeIpa(ukFound.ipa, v)) ukIpa = ukFound.ipa;
+            }
+            if (!usIpa || !ukIpa) {
+                const vDb = getBasePronunciationsFromDb(v);
+                if (vDb && vDb.length > 0) {
+                    const validVDb = vDb.filter(p => !isFakeIpa(p.ipa, v));
+                    const usFound = validVDb.find(p => p.region === 'US' || p.region?.includes('US'));
+                    const ukFound = validVDb.find(p => p.region === 'UK' || p.region?.includes('UK'));
+                    if (!usIpa && usFound) usIpa = usFound.ipa;
+                    if (!ukIpa && ukFound) ukIpa = ukFound.ipa;
+                    if (!usIpa && !ukIpa && validVDb[0]) {
+                        usIpa = validVDb[0].ipa;
+                        ukIpa = validVDb[0].ipa;
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Nếu vẫn thiếu, dùng bộ G2P (Grapheme-to-Phoneme) sinh âm tự động
+    if (!usIpa || isFakeIpa(usIpa, cleanWord)) {
+        usIpa = generateEnglishIpa(cleanWord, 'US');
+    }
+    if (!ukIpa || isFakeIpa(ukIpa, cleanWord)) {
+        ukIpa = generateEnglishIpa(cleanWord, 'UK');
+    }
+
+    const finalUsIpa = cleanIpa(usIpa) || `/ˈ${cleanWord}/`;
+    const finalUkIpa = cleanIpa(ukIpa) || finalUsIpa;
 
     return [
         {
@@ -673,7 +778,13 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
         if (res.lang_code === 'en') {
             enPronAssigned = true;
             updatedAudio = `/api/v1/tts?word=${encodeURIComponent(lookupRes.word)}&lang=en`;
-            updatedPronunciations = formatUsUkPronunciations(lookupRes.word, res.pronunciations);
+            // Nếu lookupRes.word trùng với res.word: dùng pronunciations trực tiếp của res
+            // Nếu lookupRes.word khác res.word (ví dụ lookupRes.word là 'displaying' nhưng res là lemma 'display'):
+            // Không truyền trực tiếp phiên âm của từ gốc mà để formatUsUkPronunciations tự động suy diễn biến thể chuẩn xác
+            const rawProns = (res.word && res.word.toLowerCase() === lookupRes.word.toLowerCase())
+                ? res.pronunciations
+                : undefined;
+            updatedPronunciations = formatUsUkPronunciations(lookupRes.word, rawProns);
         } else if (hasEn && index !== 0) {
             // Khi đã có tiếng Anh: không trả phiên âm cho các ngôn ngữ phụ (Pháp, Đức, VN...) ở các vị trí sau
             // để đảm bảo mỗi từ tiếng Anh CHỈ trả ĐÚNG 2 phiên âm US và UK
@@ -682,12 +793,15 @@ export function normalizeResultPronunciations(lookupRes: MultiLookupResult): Mul
             // Từ chữ cái Latinh hoặc chữ số: luôn trả ĐÚNG 2 phiên âm US và UK
             enPronAssigned = true;
             updatedAudio = `/api/v1/tts?word=${encodeURIComponent(lookupRes.word)}&lang=en`;
-            updatedPronunciations = formatUsUkPronunciations(lookupRes.word, res.pronunciations);
+            const rawProns = (res.word && res.word.toLowerCase() === lookupRes.word.toLowerCase())
+                ? res.pronunciations
+                : undefined;
+            updatedPronunciations = formatUsUkPronunciations(lookupRes.word, rawProns);
         } else if (isNumberOrLatin) {
             updatedPronunciations = [];
         } else {
             updatedPronunciations = res.pronunciations.map(p => {
-                const cleaned = cleanIpa(p.ipa, lookupRes.word);
+                const cleaned = cleanIpa(p.ipa) || `/${p.ipa || lookupRes.word}/`;
                 return {
                     ...p,
                     ipa: cleaned,

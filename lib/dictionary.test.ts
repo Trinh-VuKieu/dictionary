@@ -1280,6 +1280,67 @@ describe('Dictionary Module', () => {
             const resClasses = await lookupWord('classes');
             expect(resClasses.rootWord).toBe('class');
         });
+
+        it('should strictly return accurate US/UK IPA for display and its inflections (displaying, displayed, displays) without fake spelling IPAs', async () => {
+            // 1. displaying
+            const resDisplaying = await lookupWord('displaying');
+            expect(resDisplaying.exists).toBe(true);
+            expect(resDisplaying.rootWord).toBe('display');
+            expect(resDisplaying.word).toBe('displaying');
+            expect(resDisplaying.phonetics).toBeDefined();
+            expect(resDisplaying.phonetics!.length).toBe(2);
+
+            const usPron = resDisplaying.phonetics!.find(p => p.region === 'US');
+            const ukPron = resDisplaying.phonetics!.find(p => p.region === 'UK');
+            expect(usPron).toBeDefined();
+            expect(ukPron).toBeDefined();
+            expect(usPron!.ipa).toBe('/dɪˈspleɪ.ɪŋ/');
+            expect(usPron!.phonetic).toBe('/dɪˈspleɪ.ɪŋ/');
+            expect(ukPron!.ipa).toBe('/dɪˈspleɪ.ɪŋ/');
+            expect(ukPron!.phonetic).toBe('/dɪˈspleɪ.ɪŋ/');
+
+            // Never contain fake '/display/' or '/displaying/'
+            expect(resDisplaying.phonetics!.some(p => p.ipa === '/display/' || p.ipa === '/displaying/')).toBe(false);
+
+            // 2. display
+            const resDisplay = await lookupWord('display');
+            expect(resDisplay.exists).toBe(true);
+            expect(resDisplay.rootWord).toBe(null);
+            const usBase = resDisplay.phonetics!.find(p => p.region === 'US');
+            const ukBase = resDisplay.phonetics!.find(p => p.region === 'UK');
+            expect(usBase!.ipa).toBe('/dɪˈspleɪ/');
+            expect(ukBase!.ipa).toBe('/dɪˈspleɪ/');
+
+            // 3. displayed
+            const resDisplayed = await lookupWord('displayed');
+            expect(resDisplayed.rootWord).toBe('display');
+            expect(resDisplayed.phonetics!.some(p => p.ipa === '/dɪˈspleɪd/')).toBe(true);
+
+            // 4. displays
+            const resDisplays = await lookupWord('displays');
+            expect(resDisplays.rootWord).toBe('display');
+            expect(resDisplays.phonetics!.some(p => p.ipa === '/dɪˈspleɪz/')).toBe(true);
+        });
+
+        it('should return exact model format for displaying with accurate UK and US phonetics (/dɪˈspleɪ.ɪŋ/)', async () => {
+            const { GET } = await import('../app/api/v1/lookup/route');
+            const req = new Request('http://localhost:3000/api/v1/lookup?word=displaying&format=model');
+            const response = await GET(req);
+            expect(response.status).toBe(200);
+            const data = await response.json();
+
+            expect(data.word).toBe('displaying');
+            expect(data.rootWord).toBe('display');
+            expect(data.phonetics).toBeDefined();
+            expect(data.phonetics.length).toBe(2);
+
+            const uk = data.phonetics.find((p: any) => p.region === 'UK');
+            const us = data.phonetics.find((p: any) => p.region === 'US');
+            expect(uk.phonetic).toBe('/dɪˈspleɪ.ɪŋ/');
+            expect(us.phonetic).toBe('/dɪˈspleɪ.ɪŋ/');
+            expect(uk.audioUrl).toContain('word=displaying');
+            expect(us.audioUrl).toContain('word=displaying');
+        });
     })
 })
 

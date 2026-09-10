@@ -29,6 +29,54 @@ export const ENGLISH_PHONETICS_MAP: Record<string, DictionaryPronunciation[]> = 
         { ipa: "/ˌpiː ˈem/", region: "US" },
         { ipa: "/ˌpiː ˈem/", region: "UK" }
     ],
+    "is": [
+        { ipa: "/ɪz/", region: "US" },
+        { ipa: "/ɪz/", region: "UK" }
+    ],
+    "are": [
+        { ipa: "/ɑːr/", region: "US" },
+        { ipa: "/ɑː/", region: "UK" }
+    ],
+    "was": [
+        { ipa: "/wʌz/", region: "US" },
+        { ipa: "/wɒz/", region: "UK" }
+    ],
+    "were": [
+        { ipa: "/wɝː/", region: "US" },
+        { ipa: "/wɜː/", region: "UK" }
+    ],
+    "does": [
+        { ipa: "/dʌz/", region: "US" },
+        { ipa: "/dʌz/", region: "UK" }
+    ],
+    "did": [
+        { ipa: "/dɪd/", region: "US" },
+        { ipa: "/dɪd/", region: "UK" }
+    ],
+    "done": [
+        { ipa: "/dʌn/", region: "US" },
+        { ipa: "/dʌn/", region: "UK" }
+    ],
+    "went": [
+        { ipa: "/went/", region: "US" },
+        { ipa: "/went/", region: "UK" }
+    ],
+    "gone": [
+        { ipa: "/ɡɔːn/", region: "US" },
+        { ipa: "/ɡɒn/", region: "UK" }
+    ],
+    "shown": [
+        { ipa: "/ʃoʊn/", region: "US" },
+        { ipa: "/ʃəʊn/", region: "UK" }
+    ],
+    "bought": [
+        { ipa: "/bɔːt/", region: "US" },
+        { ipa: "/bɔːt/", region: "UK" }
+    ],
+    "thought": [
+        { ipa: "/θɔːt/", region: "US" },
+        { ipa: "/θɔːt/", region: "UK" }
+    ],
 
     // 1.1. Các dạng viết tắt thông dụng (Contractions)
     "don't": [
@@ -890,6 +938,76 @@ export const ENGLISH_PHONETICS_MAP: Record<string, DictionaryPronunciation[]> = 
     "oxen": [
         { ipa: "/ˈɑːk.sən/", region: "US" },
         { ipa: "/ˈɒk.sən/", region: "UK" }
+    ],
+
+    // 8. Các từ vựng thông dụng và dạng biến thể có phiên âm chuẩn
+    "display": [
+        { ipa: "/dɪˈspleɪ/", region: "US" },
+        { ipa: "/dɪˈspleɪ/", region: "UK" }
+    ],
+    "displaying": [
+        { ipa: "/dɪˈspleɪ.ɪŋ/", region: "US" },
+        { ipa: "/dɪˈspleɪ.ɪŋ/", region: "UK" }
+    ],
+    "displayed": [
+        { ipa: "/dɪˈspleɪd/", region: "US" },
+        { ipa: "/dɪˈspleɪd/", region: "UK" }
+    ],
+    "displays": [
+        { ipa: "/dɪˈspleɪz/", region: "US" },
+        { ipa: "/dɪˈspleɪz/", region: "UK" }
+    ],
+    "could": [
+        { ipa: "/kʊd/", region: "US" },
+        { ipa: "/kʊd/", region: "UK" }
+    ],
+    "would": [
+        { ipa: "/wʊd/", region: "US" },
+        { ipa: "/wʊd/", region: "UK" }
+    ],
+    "should": [
+        { ipa: "/ʃʊd/", region: "US" },
+        { ipa: "/ʃʊd/", region: "UK" }
+    ],
+    "might": [
+        { ipa: "/maɪt/", region: "US" },
+        { ipa: "/maɪt/", region: "UK" }
+    ],
+    "must": [
+        { ipa: "/mʌst/", region: "US" },
+        { ipa: "/mʌst/", region: "UK" }
+    ],
+    "shall": [
+        { ipa: "/ʃæl/", region: "US" },
+        { ipa: "/ʃæl/", region: "UK" }
+    ],
+    "mouth": [
+        { ipa: "/maʊθ/", region: "US" },
+        { ipa: "/maʊθ/", region: "UK" }
+    ],
+    "point": [
+        { ipa: "/pɔɪnt/", region: "US" },
+        { ipa: "/pɔɪnt/", region: "UK" }
+    ],
+    "south": [
+        { ipa: "/saʊθ/", region: "US" },
+        { ipa: "/saʊθ/", region: "UK" }
+    ],
+    "software": [
+        { ipa: "/ˈsɔːft.wer/", region: "US" },
+        { ipa: "/ˈsɒft.weə/", region: "UK" }
+    ],
+    "computer": [
+        { ipa: "/kəmˈpjuː.t̬ɚ/", region: "US" },
+        { ipa: "/kəmˈpjuː.tə/", region: "UK" }
+    ],
+    "window": [
+        { ipa: "/ˈwɪn.doʊ/", region: "US" },
+        { ipa: "/ˈwɪn.dəʊ/", region: "UK" }
+    ],
+    "screen": [
+        { ipa: "/skriːn/", region: "US" },
+        { ipa: "/skriːn/", region: "UK" }
     ]
 };
 
@@ -904,3 +1022,206 @@ export function getEnglishPhoneticFallback(word: string): DictionaryPronunciatio
     }
     return null;
 }
+
+/**
+ * Suy diễn phiên âm cho từ biến thể (inflection) từ phiên âm của từ gốc (base lemma)
+ * Ví dụ:
+ *  - display (/dɪˈspleɪ/) + ing -> displaying (/dɪˈspleɪ.ɪŋ/)
+ *  - display (/dɪˈspleɪ/) + ed  -> displayed (/dɪˈspleɪd/)
+ *  - display (/dɪˈspleɪ/) + s   -> displays (/dɪˈspleɪz/)
+ *  - watch (/wɒtʃ/) + es        -> watches (/ˈwɒtʃ.ɪz/)
+ *  - quick (/kwɪk/) + ly        -> quickly (/ˈkwɪk.li/)
+ *  - fast (/fæst/) + er         -> faster (/ˈfæs.tɚ/ US, /ˈfɑːs.tə/ UK)
+ */
+export function deriveInflectedIpa(baseIpa: string, word: string, baseWord: string, region: 'US' | 'UK' = 'US'): string {
+    if (!baseIpa) return '';
+    const cleanBase = baseIpa.trim().replace(/^\/+|\/+$/g, '').trim();
+    if (!cleanBase) return '';
+
+    const w = word.toLowerCase().trim();
+    const b = baseWord.toLowerCase().trim();
+    if (w === b) return `/${cleanBase}/`;
+
+    // 1. Dạng đuôi -ing (gerund / present participle)
+    if (w.endsWith('ing') && (w === b + 'ing' || w === b.replace(/e$/, '') + 'ing' || (b.length >= 3 && w.startsWith(b.slice(0, -1))))) {
+        let res = `${cleanBase}.ɪŋ`;
+        if (!res.includes('ˈ') && !res.includes('ˌ')) {
+            res = `ˈ${res}`;
+        }
+        return `/${res}/`;
+    }
+
+    // 2. Dạng đuôi -ed / -d (past tense / past participle)
+    if (w.endsWith('ed') || (b.endsWith('e') && w.endsWith('d'))) {
+        if (cleanBase.endsWith('t') || cleanBase.endsWith('d')) {
+            let res = `${cleanBase}.ɪd`;
+            if (!res.includes('ˈ') && !res.includes('ˌ')) res = `ˈ${res}`;
+            return `/${res}/`;
+        }
+        const voiceless = ['p', 'k', 'f', 'θ', 's', 'ʃ', 'tʃ'];
+        if (voiceless.some(c => cleanBase.endsWith(c))) {
+            return `/${cleanBase}t/`;
+        }
+        return `/${cleanBase}d/`;
+    }
+
+    // 3. Dạng đuôi -s / -es (plural / 3rd person singular)
+    if (w.endsWith('s') || w.endsWith('es')) {
+        const sibilants = ['s', 'z', 'ʃ', 'ʒ', 'tʃ', 'dʒ', 'ks', 'ts'];
+        if (sibilants.some(c => cleanBase.endsWith(c))) {
+            let res = `${cleanBase}.ɪz`;
+            if (!res.includes('ˈ') && !res.includes('ˌ')) res = `ˈ${res}`;
+            return `/${res}/`;
+        }
+        const voiceless = ['p', 't', 'k', 'f', 'θ'];
+        if (voiceless.some(c => cleanBase.endsWith(c))) {
+            return `/${cleanBase}s/`;
+        }
+        return `/${cleanBase}z/`;
+    }
+
+    // 4. Dạng phó từ đuôi -ly
+    if (w.endsWith('ly') && (w === b + 'ly' || w === b.replace(/y$/, 'i') + 'ly')) {
+        let res = `${cleanBase}.li`;
+        if (!res.includes('ˈ') && !res.includes('ˌ')) res = `ˈ${res}`;
+        return `/${res}/`;
+    }
+
+    // 5. Dạng so sánh hơn -er
+    if (w.endsWith('er') && (w === b + 'er' || w === b.replace(/e$/, '') + 'er')) {
+        const erEnding = region === 'UK' ? '.ə' : '.ɚ';
+        let res = `${cleanBase}${erEnding}`;
+        if (!res.includes('ˈ') && !res.includes('ˌ')) res = `ˈ${res}`;
+        return `/${res}/`;
+    }
+
+    // 6. Dạng so sánh nhất -est
+    if (w.endsWith('est') && (w === b + 'est' || w === b.replace(/e$/, '') + 'est')) {
+        let res = `${cleanBase}.ɪst`;
+        if (!res.includes('ˈ') && !res.includes('ˌ')) res = `ˈ${res}`;
+        return `/${res}/`;
+    }
+
+    return `/${cleanBase}/`;
+}
+
+/**
+ * Bộ suy luận phiên âm G2P (Grapheme-to-Phoneme) chuẩn hóa cho từ tiếng Anh
+ * Tuyệt đối không bao giờ trả về chuỗi chính tả bọc dấu gạch chéo (/word/)
+ */
+export function generateEnglishIpa(word: string, region: 'US' | 'UK' = 'US'): string {
+    const clean = word.toLowerCase().trim();
+    if (!clean) return '//';
+
+    // 1. Kiểm tra bảng tĩnh
+    const fallback = getEnglishPhoneticFallback(clean);
+    if (fallback && fallback.length > 0) {
+        const match = fallback.find(p => p.region === region || p.region?.includes(region));
+        if (match?.ipa) return match.ipa;
+    }
+
+    // 2. Chuyển đổi ngữ âm dựa trên tiền tố, nguyên âm đôi và quy tắc phát âm tiếng Anh
+    let s = clean;
+    const isUK = region === 'UK';
+
+    // Thay thế tiền tố phổ biến
+    let prefix = '';
+    if (s.startsWith('dis')) {
+        prefix = 'dɪs';
+        s = s.slice(3);
+        if (s.startsWith('p') || s.startsWith('t') || s.startsWith('k')) {
+            prefix = 'dɪˈs';
+        }
+    } else if (s.startsWith('re') && s.length > 4) {
+        prefix = 'rɪˈ';
+        s = s.slice(2);
+    } else if (s.startsWith('un')) {
+        prefix = 'ʌnˈ';
+        s = s.slice(2);
+    } else if (s.startsWith('in') || s.startsWith('im')) {
+        prefix = s.startsWith('in') ? 'ɪnˈ' : 'ɪmˈ';
+        s = s.slice(2);
+    } else if (s.startsWith('con') || s.startsWith('com')) {
+        prefix = s.startsWith('con') ? 'kənˈ' : 'kəmˈ';
+        s = s.slice(3);
+    }
+
+    // Thay thế hậu tố phổ biến
+    let suffix = '';
+    if (s.endsWith('ing')) {
+        suffix = '.ɪŋ';
+        s = s.slice(0, -3);
+    } else if (s.endsWith('tion')) {
+        suffix = 'ʃən';
+        s = s.slice(0, -4);
+    } else if (s.endsWith('sion')) {
+        suffix = 'ʒən';
+        s = s.slice(0, -4);
+    } else if (s.endsWith('ment')) {
+        suffix = 'mənt';
+        s = s.slice(0, -4);
+    } else if (s.endsWith('ness')) {
+        suffix = 'nəs';
+        s = s.slice(0, -4);
+    } else if (s.endsWith('ful')) {
+        suffix = 'fʊl';
+        s = s.slice(0, -3);
+    } else if (s.endsWith('less')) {
+        suffix = 'ləs';
+        s = s.slice(0, -4);
+    } else if (s.endsWith('ly')) {
+        suffix = '.li';
+        s = s.slice(0, -2);
+    }
+
+    // Chuyển đổi thân từ (stem)
+    let body = s
+        .replace(/ay/g, 'eɪ')
+        .replace(/ai/g, 'eɪ')
+        .replace(/ee/g, 'iː')
+        .replace(/ea/g, 'iː')
+        .replace(/oa/g, isUK ? 'əʊ' : 'oʊ')
+        .replace(/oo/g, 'uː')
+        .replace(/oi/g, 'ɔɪ')
+        .replace(/oy/g, 'ɔɪ')
+        .replace(/ou/g, 'aʊ')
+        .replace(/ow/g, isUK ? 'əʊ' : 'oʊ')
+        .replace(/ar/g, isUK ? 'ɑː' : 'ɑːr')
+        .replace(/or/g, isUK ? 'ɔː' : 'ɔːr')
+        .replace(/er/g, isUK ? 'ɜː' : 'ɝː')
+        .replace(/ir/g, isUK ? 'ɜː' : 'ɝː')
+        .replace(/ur/g, isUK ? 'ɜː' : 'ɝː')
+        .replace(/all/g, 'ɔːl')
+        .replace(/alk/g, 'ɔːk')
+        .replace(/igh/g, 'aɪ')
+        .replace(/ph/g, 'f')
+        .replace(/ch/g, 'tʃ')
+        .replace(/sh/g, 'ʃ')
+        .replace(/th/g, 'θ')
+        .replace(/wh/g, 'w')
+        .replace(/ck/g, 'k')
+        .replace(/kn/g, 'n')
+        .replace(/wr/g, 'r')
+        .replace(/qu/g, 'kw')
+        .replace(/c(?=[eiy])/g, 's')
+        .replace(/c/g, 'k')
+        .replace(/x/g, 'ks')
+        .replace(/y$/g, 'i')
+        .replace(/a(?=[b-df-hj-np-tv-z]e$)/g, 'eɪ')
+        .replace(/i(?=[b-df-hj-np-tv-z]e$)/g, 'aɪ')
+        .replace(/o(?=[b-df-hj-np-tv-z]e$)/g, isUK ? 'əʊ' : 'oʊ')
+        .replace(/u(?=[b-df-hj-np-tv-z]e$)/g, 'juː')
+        .replace(/e$/g, '')
+        .replace(/a/g, 'æ')
+        .replace(/e/g, 'e')
+        .replace(/i/g, 'ɪ')
+        .replace(/o/g, isUK ? 'ɒ' : 'ɑː')
+        .replace(/u/g, 'ʌ');
+
+    let result = `${prefix}${body}${suffix}`;
+    if (!result.includes('ˈ') && !result.includes('ˌ')) {
+        result = `ˈ${result}`;
+    }
+    return `/${result}/`;
+}
+
