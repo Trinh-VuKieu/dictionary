@@ -5,6 +5,22 @@ import { DictionaryPronunciation } from './dictionary';
  * bị thiếu trong cơ sở dữ liệu SQLite gốc.
  */
 export const ENGLISH_PHONETICS_MAP: Record<string, DictionaryPronunciation[]> = {
+    "his": [
+        { ipa: "/hɪz/", region: "US" },
+        { ipa: "/hɪz/", region: "UK" }
+    ],
+    "my": [
+        { ipa: "/maɪ/", region: "US" },
+        { ipa: "/maɪ/", region: "UK" }
+    ],
+    "which": [
+        { ipa: "/wɪtʃ/", region: "US" },
+        { ipa: "/wɪtʃ/", region: "UK" }
+    ],
+    "only": [
+        { ipa: "/ˈoʊn.li/", region: "US" },
+        { ipa: "/ˈəʊn.li/", region: "UK" }
+    ],
     "have": [
         { ipa: "/hæv/", region: "US" },
         { ipa: "/hæv/", region: "UK" }
